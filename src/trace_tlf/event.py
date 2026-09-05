@@ -1,5 +1,6 @@
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Optional
+from typing import Any
 
 from .context import TraceContext
 from .operations import Operation
@@ -7,7 +8,7 @@ from .severity import Severity
 from .status import Status
 
 
-def _copy_mapping(value: Optional[Mapping[str, Any]], field_name: str) -> dict[str, Any]:
+def _copy_mapping(value: Mapping[str, Any] | None, field_name: str) -> dict[str, Any]:
     if value is None:
         return {}
     if not isinstance(value, Mapping):
@@ -27,11 +28,11 @@ class TraceEvent:
     severity: Severity
     operation: Operation
     action: str
-    object: Optional[str] = None
+    object: str | None = None
     metrics: Mapping[str, Any] = field(default_factory=dict)
     details: Mapping[str, Any] = field(default_factory=dict)
-    status: Optional[Status] = None
-    context: Optional[TraceContext] = None
+    status: Status | None = None
+    context: TraceContext | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.severity, Severity):

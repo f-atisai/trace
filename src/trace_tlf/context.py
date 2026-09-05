@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Optional, Tuple
 
 
 @dataclass(frozen=True, slots=True)
@@ -7,11 +6,11 @@ class TraceContext:
     """Structured execution context attached to a TRACE event."""
 
     program: str
-    study: Optional[str] = None
-    run_id: Optional[str] = None
-    step: Optional[str] = None
-    step_path: Tuple[str, ...] = field(default_factory=tuple)
-    trace_version: Optional[str] = None
+    study: str | None = None
+    run_id: str | None = None
+    step: str | None = None
+    step_path: tuple[str, ...] = field(default_factory=tuple)
+    trace_version: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.program, str) or not self.program.strip():
@@ -35,7 +34,7 @@ class TraceContext:
         if self.trace_version is not None and not isinstance(self.trace_version, str):
             raise TypeError("trace_version must be a string or None")
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         result = {
             "program": self.program,
             "study": self.study,
@@ -44,4 +43,8 @@ class TraceContext:
             "step_path": list(self.step_path),
             "trace_version": self.trace_version,
         }
-        return {key: value for key, value in result.items() if value not in (None, [], ())}
+        return {
+            key: value
+            for key, value in result.items()
+            if value not in (None, [], ())
+        }
