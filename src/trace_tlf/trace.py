@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -55,6 +55,363 @@ class Trace:
 
         self.logger = self._build_logger()
 
+    # ------------------------------------------------------------------
+    # Tier 1 API
+    # ------------------------------------------------------------------
+
+    def read(
+        self,
+        name: str,
+        *,
+        source: str | None = None,
+        rows: int | None = None,
+        columns: int | None = None,
+        details: Mapping[str, Any] | None = None,
+    ) -> TraceEvent:
+        self._require_name(name, "name")
+        self._require_non_negative_int(rows, "rows")
+        self._require_non_negative_int(columns, "columns")
+
+        event_details = self._merge_details(
+            details,
+            source=source,
+        )
+        metrics = self._compact_mapping(
+            rows=rows,
+            columns=columns,
+        )
+
+        return self._record(
+            operation=Operation.READ,
+            object=name,
+            action="loaded",
+            metrics=metrics,
+            details=event_details,
+        )
+
+    def check(
+        self,
+        name: str,
+        check: str,
+        *,
+        metrics: Mapping[str, Any] | None = None,
+        details: Mapping[str, Any] | None = None,
+    ) -> TraceEvent:
+        self._require_name(name, "name")
+        self._require_text(check, "check")
+
+        return self._record(
+            operation=Operation.CHECK,
+            object=name,
+            action=check,
+            metrics=metrics,
+            details=details,
+        )
+
+    def filter(
+        self,
+        name: str,
+        condition: str,
+        *,
+        before: int | None = None,
+        after: int | None = None,
+        removed: int | None = None,
+        details: Mapping[str, Any] | None = None,
+    ) -> TraceEvent:
+        self._require_name(name, "name")
+        self._require_text(condition, "condition")
+        self._require_non_negative_int(before, "before")
+        self._require_non_negative_int(after, "after")
+        self._require_non_negative_int(removed, "removed")
+
+        if removed is None and before is not None and after is not None:
+            removed = before - after
+
+        if (
+            before is not None
+            and after is not None
+            and removed is not None
+            and before - after != removed
+        ):
+            raise ValueError(
+                "removed must equal before - after when all three are supplied"
+            )
+
+        metrics = self._compact_mapping(
+            before=before,
+            after=after,
+            removed=removed,
+        )
+
+        return self._record(
+            operation=Operation.FILTER,
+            object=name,
+            action=f"{condition} applied",
+            metrics=metrics,
+            details=details,
+        )
+
+    def sort(
+        self,
+        name: str,
+        *,
+        by: str | Sequence[str],
+        ascending: bool | Sequence[bool] | None = None,
+        details: Mapping[str, Any] | None = None,
+    ) -> TraceEvent:
+        self._require_name(name, "name")
+        by_value = self._normalize_string_or_sequence(by, "by")
+
+        event_details = self._merge_details(
+            details,
+            by=by_value,
+            ascending=ascending,
+        )
+
+        return self._record(
+            operation=Operation.SORT,
+            object=name,
+            action="sorted",
+            details=event_details,
+        )
+
+    def derive(
+        self,
+        variable: str,
+        *,
+        dataset: str | None = None,
+        source: str | Sequence[str] | None = None,
+        method: str | None = None,
+        details: Mapping[str, Any] | None = None,
+    ) -> TraceEvent:
+        self._require_name(variable, "variable")
+
+        event_details = self._merge_details(
+            details,
+            dataset=dataset,
+            source=source,
+            method=method,
+        )
+
+        return self._record(
+            operation=Operation.DERIVE,
+            object=variable,
+            action="created",
+            details=event_details,
+        )
+
+    def transform(
+        self,
+        name: str,
+        transformation: str,
+        *,
+        source: str | None = None,
+        result: str | None = None,
+        details: Mapping[str, Any] | None = None,
+    ) -> TraceEvent:
+        self._require_name(name, "name")
+        self._require_text(transformation, "transformation")
+
+        event_details = self._merge_details(
+            details,
+            source=source,
+            result=result,
+        )
+
+        return self._record(
+            operation=Operation.TRANSFORM,
+            object=name,
+            action=transformation,
+            details=event_details,
+        )
+
+    def merge(
+        self,
+        left: str,
+        right: str,
+        *,
+        on: str | Sequence[str] | None = None,
+        how: str | None = None,
+        result: str | None = None,
+        left_rows: int | None = None,
+        right_rows: int | None = None,
+        result_rows: int | None = None,
+        matched: int | None = None,
+        unmatched_left: int | None = None,
+        unmatched_right: int | None = None,
+        details: Mapping[str, Any] | None = None,
+    ) -> TraceEvent:
+        self._require_name(left, "left")
+        self._require_name(right, "right")
+
+        for value, label in (
+            (left_rows, "left_rows"),
+            (right_rows, "right_rows"),
+            (result_rows, "result_rows"),
+            (matched, "matched"),
+            (unmatched_left, "unmatched_left"),
+            (unmatched_right, "unmatched_right"),
+        ):
+            self._require_non_negative_int(value, label)
+
+        on_value = (
+            self._normalize_string_or_sequence(on, "on")
+            if on is not None
+            else None
+        )
+
+        event_details = self._merge_details(
+            details,
+            left=left,
+            right=right,
+            on=on_value,
+            how=how,
+            result=result,
+        )
+        metrics = self._compact_mapping(
+            left_rows=left_rows,
+            right_rows=right_rows,
+            result_rows=result_rows,
+            matched=matched,
+            unmatched_left=unmatched_left,
+            unmatched_right=unmatched_right,
+        )
+
+        return self._record(
+            operation=Operation.MERGE,
+            object=f"{left} + {right}",
+            action="merged",
+            metrics=metrics,
+            details=event_details,
+        )
+
+    def aggregate(
+        self,
+        name: str,
+        *,
+        by: str | Sequence[str] | None = None,
+        result: str | None = None,
+        method: str | None = None,
+        rows: int | None = None,
+        details: Mapping[str, Any] | None = None,
+    ) -> TraceEvent:
+        self._require_name(name, "name")
+        self._require_non_negative_int(rows, "rows")
+
+        by_value = (
+            self._normalize_string_or_sequence(by, "by")
+            if by is not None
+            else None
+        )
+
+        event_details = self._merge_details(
+            details,
+            by=by_value,
+            result=result,
+            method=method,
+        )
+        metrics = self._compact_mapping(rows=rows)
+
+        return self._record(
+            operation=Operation.AGGREGATE,
+            object=name,
+            action="summarized",
+            metrics=metrics,
+            details=event_details,
+        )
+
+    def analyze(
+        self,
+        name: str,
+        *,
+        method: str,
+        population: str | None = None,
+        result: str | None = None,
+        details: Mapping[str, Any] | None = None,
+    ) -> TraceEvent:
+        self._require_name(name, "name")
+        self._require_text(method, "method")
+
+        event_details = self._merge_details(
+            details,
+            method=method,
+            population=population,
+            result=result,
+        )
+
+        return self._record(
+            operation=Operation.ANALYZE,
+            object=name,
+            action="analyzed",
+            details=event_details,
+        )
+
+    def validate(
+        self,
+        name: str,
+        check: str,
+        *,
+        passed: bool,
+        metrics: Mapping[str, Any] | None = None,
+        details: Mapping[str, Any] | None = None,
+    ) -> TraceEvent:
+        self._require_name(name, "name")
+        self._require_text(check, "check")
+
+        if not isinstance(passed, bool):
+            raise TypeError("passed must be a bool")
+
+        status = Status.SUCCESS if passed else Status.FAIL
+        severity = Severity.INFO if passed else Severity.WARNING
+
+        return self._record(
+            operation=Operation.VALIDATE,
+            object=name,
+            action=check,
+            metrics=metrics,
+            details=details,
+            status=status,
+            severity=severity,
+        )
+
+    def output(
+        self,
+        name: str,
+        path: str | Path,
+        *,
+        format: str | None = None,
+        rows: int | None = None,
+        details: Mapping[str, Any] | None = None,
+    ) -> TraceEvent:
+        self._require_name(name, "name")
+        self._require_non_negative_int(rows, "rows")
+
+        if not isinstance(path, (str, Path)):
+            raise TypeError("path must be a string or Path")
+
+        path_value = str(path)
+        if not path_value:
+            raise ValueError("path must not be empty")
+
+        event_details = self._merge_details(
+            details,
+            path=path_value,
+            format=format,
+        )
+        metrics = self._compact_mapping(rows=rows)
+
+        return self._record(
+            operation=Operation.OUTPUT,
+            object=name,
+            action="written",
+            metrics=metrics,
+            details=event_details,
+        )
+
+    # ------------------------------------------------------------------
+    # Generic structured event API (minimal Sprint 3/4 form)
+    # ------------------------------------------------------------------
+
     def log(
         self,
         operation: Operation | str,
@@ -65,11 +422,30 @@ class Trace:
         details: Mapping[str, Any] | None = None,
         status: Status | str | None = None,
     ) -> TraceEvent:
-        """Create and emit a structured TRACE event.
+        return self._record(
+            operation=operation,
+            object=object,
+            action=action,
+            metrics=metrics,
+            details=details,
+            status=status,
+        )
 
-        This is intentionally minimal for Sprint 3. The full generic-event
-        contract is deferred to the dedicated generic logging sprint.
-        """
+    # ------------------------------------------------------------------
+    # Shared event path
+    # ------------------------------------------------------------------
+
+    def _record(
+        self,
+        *,
+        operation: Operation | str,
+        object: str | None,
+        action: str,
+        metrics: Mapping[str, Any] | None = None,
+        details: Mapping[str, Any] | None = None,
+        status: Status | str | None = None,
+        severity: Severity = Severity.INFO,
+    ) -> TraceEvent:
         event = self._create_event(
             operation=operation,
             object=object,
@@ -77,6 +453,7 @@ class Trace:
             metrics=metrics,
             details=details,
             status=status,
+            severity=severity,
         )
         self._emit(event)
         return event
@@ -108,6 +485,76 @@ class Trace:
             _LEVELS[event.severity.value],
             render_text(event),
         )
+
+    # ------------------------------------------------------------------
+    # Prototype normalization / validation helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _require_name(value: str, label: str) -> None:
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{label} must be a non-empty string")
+
+    @staticmethod
+    def _require_text(value: str, label: str) -> None:
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{label} must be a non-empty string")
+
+    @staticmethod
+    def _require_non_negative_int(
+        value: int | None,
+        label: str,
+    ) -> None:
+        if value is None:
+            return
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise TypeError(f"{label} must be an int or None")
+        if value < 0:
+            raise ValueError(f"{label} must be >= 0")
+
+    @staticmethod
+    def _normalize_string_or_sequence(
+        value: str | Sequence[str],
+        label: str,
+    ) -> str | list[str]:
+        if isinstance(value, str):
+            if not value.strip():
+                raise ValueError(f"{label} must not be empty")
+            return value
+
+        if not isinstance(value, Sequence):
+            raise TypeError(f"{label} must be a string or sequence of strings")
+
+        normalized = list(value)
+        if not normalized:
+            raise ValueError(f"{label} must not be empty")
+        if not all(isinstance(item, str) and item.strip() for item in normalized):
+            raise TypeError(f"{label} must contain only non-empty strings")
+
+        return normalized
+
+    @staticmethod
+    def _compact_mapping(**values: Any) -> dict[str, Any]:
+        return {
+            key: value
+            for key, value in values.items()
+            if value is not None
+        }
+
+    @staticmethod
+    def _merge_details(
+        details: Mapping[str, Any] | None,
+        **values: Any,
+    ) -> dict[str, Any]:
+        merged = dict(details or {})
+        for key, value in values.items():
+            if value is not None:
+                merged[key] = value
+        return merged
+
+    # ------------------------------------------------------------------
+    # Logger setup
+    # ------------------------------------------------------------------
 
     def _build_logger(self) -> logging.Logger:
         logger_name = f"trace_tlf.{self.program}.{self.run_id}"

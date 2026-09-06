@@ -35,47 +35,48 @@ def _body(event: TraceEvent) -> str:
 
     if operation is Operation.READ:
         return _render_read(event)
-
     if operation is Operation.FILTER:
         return _render_filter(event)
-
+    if operation is Operation.SORT:
+        return _render_sort(event)
     if operation is Operation.DERIVE:
         return _render_derive(event)
-
+    if operation is Operation.TRANSFORM:
+        return _render_transform(event)
     if operation is Operation.MERGE:
         return _render_merge(event)
-
+    if operation is Operation.AGGREGATE:
+        return _render_aggregate(event)
+    if operation is Operation.ANALYZE:
+        return _render_analyze(event)
     if operation is Operation.VALIDATE:
         return _render_validate(event)
-
     if operation is Operation.OUTPUT:
         return _render_output(event)
-
     if operation is Operation.START:
         return event.action
-
     if operation is Operation.END:
         return _render_end(event)
-
     if operation is Operation.STEP:
         return _render_step(event)
 
-    # Prototype fallback for operations whose richer rendering grammar has
-    # not yet been designed. The event's explicit action remains readable.
     return _join(event.action, _render_generic_details(event))
 
 
 def _render_read(event: TraceEvent) -> str:
+    parts = []
     rows = event.metrics.get("rows")
     columns = event.metrics.get("columns")
+    source = event.details.get("source")
 
-    suffix_parts = []
+    if source is not None:
+        parts.append(f"source={_display(source)}")
     if rows is not None:
-        suffix_parts.append(f"N={rows}")
+        parts.append(f"N={rows}")
     if columns is not None:
-        suffix_parts.append(f"Vars={columns}")
+        parts.append(f"Vars={columns}")
 
-    return _join(event.action, ", ".join(suffix_parts))
+    return _join(event.action, ", ".join(parts))
 
 
 def _render_filter(event: TraceEvent) -> str:
@@ -92,48 +93,81 @@ def _render_filter(event: TraceEvent) -> str:
     return event.action
 
 
+def _render_sort(event: TraceEvent) -> str:
+    parts = []
+    by = event.details.get("by")
+    ascending = event.details.get("ascending")
+
+    if by is not None:
+        parts.append(f"by={_display(by)}")
+    if ascending is not None:
+        parts.append(f"ascending={_display(ascending)}")
+
+    return _join(event.action, ", ".join(parts))
+
+
 def _render_derive(event: TraceEvent) -> str:
     parts = []
+    for key in ("dataset", "source", "method"):
+        value = event.details.get(key)
+        if value is not None:
+            parts.append(f"{key}={_display(value)}")
+    return _join(event.action, ", ".join(parts))
 
-    dataset = event.details.get("dataset")
-    source = event.details.get("source")
-    method = event.details.get("method")
 
-    if dataset is not None:
-        parts.append(f"dataset={_display(dataset)}")
-    if source is not None:
-        parts.append(f"source={_display(source)}")
-    if method is not None:
-        parts.append(f"method={_display(method)}")
-
+def _render_transform(event: TraceEvent) -> str:
+    parts = []
+    for key in ("source", "result"):
+        value = event.details.get(key)
+        if value is not None:
+            parts.append(f"{key}={_display(value)}")
     return _join(event.action, ", ".join(parts))
 
 
 def _render_merge(event: TraceEvent) -> str:
     parts = []
 
-    on = event.details.get("on")
-    how = event.details.get("how")
-    result = event.details.get("result")
+    for key in ("on", "how", "result"):
+        value = event.details.get(key)
+        if value is not None:
+            parts.append(f"{key}={_display(value)}")
 
-    if on is not None:
-        parts.append(f"on={_display(on)}")
-    if how is not None:
-        parts.append(f"how={_display(how)}")
-    if result is not None:
-        parts.append(f"result={_display(result)}")
+    for key, label in (
+        ("left_rows", "left N"),
+        ("right_rows", "right N"),
+        ("result_rows", "result N"),
+        ("matched", "matched"),
+        ("unmatched_left", "unmatched_left"),
+        ("unmatched_right", "unmatched_right"),
+    ):
+        value = event.metrics.get(key)
+        if value is not None:
+            parts.append(f"{label}={value}")
 
-    left_rows = event.metrics.get("left_rows")
-    right_rows = event.metrics.get("right_rows")
-    result_rows = event.metrics.get("result_rows")
+    return _join(event.action, ", ".join(parts))
 
-    if left_rows is not None:
-        parts.append(f"left N={left_rows}")
-    if right_rows is not None:
-        parts.append(f"right N={right_rows}")
-    if result_rows is not None:
-        parts.append(f"result N={result_rows}")
 
+def _render_aggregate(event: TraceEvent) -> str:
+    parts = []
+
+    for key in ("by", "result", "method"):
+        value = event.details.get(key)
+        if value is not None:
+            parts.append(f"{key}={_display(value)}")
+
+    rows = event.metrics.get("rows")
+    if rows is not None:
+        parts.append(f"N={rows}")
+
+    return _join(event.action, ", ".join(parts))
+
+
+def _render_analyze(event: TraceEvent) -> str:
+    parts = []
+    for key in ("method", "population", "result"):
+        value = event.details.get(key)
+        if value is not None:
+            parts.append(f"{key}={_display(value)}")
     return _join(event.action, ", ".join(parts))
 
 
@@ -151,7 +185,6 @@ def _render_validate(event: TraceEvent) -> str:
 
     metrics = _render_metrics(event.metrics)
     suffix = ", ".join(part for part in (outcome, metrics) if part)
-
     return _join(event.action, suffix)
 
 
@@ -200,7 +233,6 @@ def _render_step(event: TraceEvent) -> str:
 
 def _render_generic_details(event: TraceEvent) -> str:
     parts = []
-
     metrics = _render_metrics(event.metrics)
     if metrics:
         parts.append(metrics)
