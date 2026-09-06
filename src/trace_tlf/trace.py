@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import sys
+import time
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
@@ -63,6 +64,73 @@ class Trace:
         )
 
         self.logger = self._build_logger()
+
+        self._lifecycle_state = "NOT_STARTED"
+        self._started_at: float | None = None
+
+    # ------------------------------------------------------------------
+    # Program lifecycle
+    # ------------------------------------------------------------------
+
+    def __enter__(self) -> Trace:
+        if self._lifecycle_state == "RUNNING":
+            raise RuntimeError("Trace instance is already running")
+        if self._lifecycle_state == "ENDED":
+            raise RuntimeError(
+                "Trace instance lifecycle has ended and cannot be reused"
+            )
+
+        self._lifecycle_state = "RUNNING"
+        self._started_at = time.monotonic()
+
+        self._record(
+            operation=Operation.START,
+            object=self.program,
+            action="execution started",
+            severity=Severity.INFO,
+        )
+
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> bool:
+        if self._lifecycle_state != "RUNNING":
+            raise RuntimeError("Trace lifecycle is not running")
+
+        started_at = self._started_at
+        duration = (
+            time.monotonic() - started_at
+            if started_at is not None
+            else 0.0
+        )
+
+        self._lifecycle_state = "ENDED"
+        self._started_at = None
+
+        if exc_type is None:
+            self._record(
+                operation=Operation.END,
+                object=self.program,
+                action="execution completed",
+                metrics={"duration_seconds": duration},
+                status=Status.SUCCESS,
+                severity=Severity.INFO,
+            )
+            return False
+
+        try:
+            self._record(
+                operation=Operation.END,
+                object=self.program,
+                action="execution failed",
+                metrics={"duration_seconds": duration},
+                details={"exception_type": exc_type.__name__},
+                status=Status.FAIL,
+                severity=Severity.ERROR,
+            )
+        except Exception:
+            pass
+
+        return False
 
     # ------------------------------------------------------------------
     # Tier 1 API
