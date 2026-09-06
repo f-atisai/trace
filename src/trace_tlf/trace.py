@@ -67,6 +67,7 @@ class Trace:
 
         self._lifecycle_state = "NOT_STARTED"
         self._started_at: float | None = None
+        self._step_stack: list[str] = []
 
     # ------------------------------------------------------------------
     # Program lifecycle
@@ -131,6 +132,14 @@ class Trace:
             pass
 
         return False
+
+    # ------------------------------------------------------------------
+    # Step instrumentation
+    # ------------------------------------------------------------------
+
+    def step(self, name: str) -> _StepScope:
+        self._require_text(name, "step name")
+        return _StepScope(self, name)
 
     # ------------------------------------------------------------------
     # Tier 1 API
@@ -569,13 +578,26 @@ class Trace:
             metrics=metrics or {},
             details=details or {},
             status=status,
-            context=self.context,
+            context=self._event_context(),
         )
 
     def _emit(self, event: TraceEvent) -> None:
         self.logger.log(
             _LEVELS[event.severity.value],
             render_text(event),
+        )
+
+    def _event_context(self) -> TraceContext:
+        step_path = tuple(self._step_stack)
+        step = step_path[-1] if step_path else None
+
+        return TraceContext(
+            program=self.program,
+            study=self.study,
+            run_id=self.run_id,
+            step=step,
+            step_path=step_path,
+            trace_version=self.context.trace_version,
         )
 
     # ------------------------------------------------------------------
@@ -745,3 +767,81 @@ class Trace:
             )
 
         return normalized
+
+
+
+class _StepScope:
+    """Internal context manager for TRACE step instrumentation."""
+
+    def __init__(self, trace: Trace, name: str) -> None:
+        self._trace = trace
+        self._name = name
+        self._started_at: float | None = None
+        self._entered = False
+
+    def __enter__(self) -> _StepScope:
+        if self._entered:
+            raise RuntimeError("step scope cannot be re-entered")
+
+        self._entered = True
+        self._trace._step_stack.append(self._name)
+        self._started_at = time.monotonic()
+
+        try:
+            self._trace._record(
+                operation=Operation.STEP,
+                object=self._name,
+                action="started",
+                severity=Severity.INFO,
+            )
+        except Exception:
+            self._trace._step_stack.pop()
+            self._entered = False
+            self._started_at = None
+            raise
+
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> bool:
+        if not self._entered:
+            raise RuntimeError("step scope is not active")
+
+        duration = (
+            time.monotonic() - self._started_at
+            if self._started_at is not None
+            else 0.0
+        )
+
+        try:
+            if exc_type is None:
+                self._trace._record(
+                    operation=Operation.STEP,
+                    object=self._name,
+                    action="completed",
+                    metrics={"duration_seconds": duration},
+                    status=Status.SUCCESS,
+                    severity=Severity.INFO,
+                )
+            else:
+                try:
+                    self._trace._record(
+                        operation=Operation.STEP,
+                        object=self._name,
+                        action="failed",
+                        metrics={"duration_seconds": duration},
+                        details={"exception_type": exc_type.__name__},
+                        status=Status.FAIL,
+                        severity=Severity.ERROR,
+                    )
+                except Exception:
+                    # Never replace the program's original exception with
+                    # an instrumentation failure.
+                    pass
+        finally:
+            popped = self._trace._step_stack.pop()
+            if popped != self._name:
+                raise RuntimeError("TRACE step stack became inconsistent")
+            self._entered = False
+            self._started_at = None
+
+        return False
