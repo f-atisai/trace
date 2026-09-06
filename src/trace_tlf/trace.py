@@ -22,6 +22,15 @@ _LEVELS = {
     "CRITICAL": logging.CRITICAL,
 }
 
+_OPERATION_HINTS = {
+    "SUBSET": "FILTER",
+    "WHERE": "FILTER",
+    "JOIN": "MERGE",
+    "COMBINE": "MERGE",
+    "LOAD": "READ",
+    "EXPORT": "OUTPUT",
+}
+
 
 class Trace:
     """Disposable reference implementation of the TRACE core orchestrator."""
@@ -422,13 +431,28 @@ class Trace:
         details: Mapping[str, Any] | None = None,
         status: Status | str | None = None,
     ) -> TraceEvent:
+        """Emit a canonical structured TRACE event.
+
+        This is the Tier 2 escape hatch. It accepts only canonical TRACE
+        operations and preserves the same TraceEvent model used by Tier 1.
+        """
+        normalized_operation = self._normalize_operation(operation)
+        self._require_text(action, "action")
+
+        if object is not None:
+            self._require_text(object, "object")
+
+        normalized_metrics = self._normalize_mapping(metrics, "metrics")
+        normalized_details = self._normalize_mapping(details, "details")
+        normalized_status = self._normalize_status(status)
+
         return self._record(
-            operation=operation,
+            operation=normalized_operation,
             object=object,
             action=action,
-            metrics=metrics,
-            details=details,
-            status=status,
+            metrics=normalized_metrics,
+            details=normalized_details,
+            status=normalized_status,
         )
 
     # ------------------------------------------------------------------
@@ -551,6 +575,61 @@ class Trace:
             if value is not None:
                 merged[key] = value
         return merged
+
+    @staticmethod
+    def _normalize_operation(operation: Operation | str) -> Operation:
+        if isinstance(operation, Operation):
+            return operation
+
+        if not isinstance(operation, str):
+            raise TypeError("operation must be an Operation or string")
+
+        normalized = operation.upper()
+
+        try:
+            return Operation(normalized)
+        except ValueError as exc:
+            hint = _OPERATION_HINTS.get(normalized)
+            if hint is not None:
+                raise ValueError(
+                    f"unknown TRACE operation {operation!r}; "
+                    f"use canonical operation {hint!r}"
+                ) from exc
+
+            allowed = ", ".join(item.value for item in Operation)
+            raise ValueError(
+                f"unknown TRACE operation {operation!r}; "
+                f"expected one of: {allowed}"
+            ) from exc
+
+    @staticmethod
+    def _normalize_mapping(
+        value: Mapping[str, Any] | None,
+        label: str,
+    ) -> dict[str, Any]:
+        if value is None:
+            return {}
+        if not isinstance(value, Mapping):
+            raise TypeError(f"{label} must be a mapping or None")
+        return dict(value)
+
+    @staticmethod
+    def _normalize_status(
+        status: Status | str | None,
+    ) -> Status | None:
+        if status is None or isinstance(status, Status):
+            return status
+
+        if not isinstance(status, str):
+            raise TypeError("status must be a Status, string, or None")
+
+        try:
+            return Status(status.upper())
+        except ValueError as exc:
+            allowed = ", ".join(item.value for item in Status)
+            raise ValueError(
+                f"invalid status {status!r}; expected one of: {allowed}"
+            ) from exc
 
     # ------------------------------------------------------------------
     # Logger setup
