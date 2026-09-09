@@ -64,8 +64,10 @@ with Trace("ADLB", study="PROTO001") as trace:
             left_rows=len(adlb),
             right_rows=len(adsl),
             result_rows=len(merged),
-            matched=int(merged["USUBJID"].isin(adsl["USUBJID"]).sum()),
-            unmatched_left=int(merged["TRTSDT"].isna().sum()),
+            metrics={
+                "matched_rows": merged["USUBJID"].isin(adsl["USUBJID"]).sum(),
+                "unmatched_rows": merged["TRTSDT"].isna().sum(),
+            },
         )
 
     with trace.step("Derive analysis variables"):
@@ -104,11 +106,15 @@ with Trace("ADLB", study="PROTO001") as trace:
             on=["USUBJID", "PARAMCD"],
             how="left",
         )
-        trace.transform(
+        trace.merge(
             "ADLB_WORK",
-            "attached baseline value to analysis records",
-            source="ABLFL, AVAL",
-            result="BASE",
+            "BASELINE_VALUES",
+            on=["USUBJID", "PARAMCD"],
+            how="left",
+            result="ADLB_WORK",
+            left_rows=len(merged),
+            right_rows=len(baseline),
+            result_rows=len(merged),
         )
 
         merged["CHG"] = merged["AVAL"] - merged["BASE"]

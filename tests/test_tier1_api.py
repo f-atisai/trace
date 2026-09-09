@@ -96,6 +96,7 @@ def test_merge():
         left_rows=4127,
         right_rows=754,
         result_rows=4127,
+        metrics={"matched_subjects": 751},
     )
 
     assert event.operation is Operation.MERGE
@@ -103,6 +104,7 @@ def test_merge():
     assert event.details["right"] == "ADSL"
     assert event.details["on"] == "USUBJID"
     assert event.metrics["result_rows"] == 4127
+    assert event.metrics["matched_subjects"] == 751
 
 
 def test_aggregate():
@@ -123,6 +125,7 @@ def test_aggregate():
 def test_analyze():
     trace = Trace("T14_01")
     event = trace.analyze(
+        "ADTTE",
         "Overall survival",
         method="Kaplan-Meier",
         population="ITT",
@@ -130,6 +133,8 @@ def test_analyze():
     )
 
     assert event.operation is Operation.ANALYZE
+    assert event.object == "Overall survival"
+    assert event.details["source"] == "ADTTE"
     assert event.details["method"] == "Kaplan-Meier"
     assert event.details["population"] == "ITT"
 

@@ -48,7 +48,7 @@ with Trace("T14_03", study="PROTO001") as trace:
         validate="many_to_one",
     )
     matched_subjects = int(merged["USUBJID"].nunique())
-    unmatched_left = int(
+    unmatched_subjects = int(
         teae.loc[
             ~teae["USUBJID"].isin(safety["USUBJID"]),
             "USUBJID",
@@ -64,8 +64,10 @@ with Trace("T14_03", study="PROTO001") as trace:
         left_rows=len(teae),
         right_rows=len(safety),
         result_rows=len(merged),
-        matched=matched_subjects,
-        unmatched_left=unmatched_left,
+        metrics={
+            "matched_subjects": matched_subjects,
+            "unmatched_subjects": unmatched_subjects,
+        },
     )
 
     summary = (

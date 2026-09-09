@@ -31,13 +31,14 @@ with Trace("L16_01", study="PROTO001") as trace:
     )
 
     listing["AGE_SEX"] = listing["AGE"].astype(str) + " / " + listing["SEX"]
-    listing = listing[["USUBJID", "TRT01A", "AGE_SEX"]]
-    trace.transform(
-        "ADSL",
-        "combined AGE and SEX for listing display",
-        source="AGE, SEX",
-        result="AGE_SEX",
+    trace.derive(
+        "AGE_SEX",
+        dataset="subject_listing",
+        source=["AGE", "SEX"],
+        method="display concatenation",
     )
+
+    listing = listing[["USUBJID", "TRT01A", "AGE_SEX"]]
 
     path = OUTPUT_DIR / "subject_listing.csv"
     listing.to_csv(path, index=False)

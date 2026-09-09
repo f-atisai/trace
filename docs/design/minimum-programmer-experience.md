@@ -325,9 +325,11 @@ trace.aggregate(
 
 ```python
 trace.analyze(
-    "OS",
+    "ADTTE",
+    "Overall survival",
     method="Kaplan-Meier",
     population="ITT",
+    result="km_curve",
 )
 ```
 

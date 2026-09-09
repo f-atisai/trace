@@ -211,8 +211,8 @@ Consider:
 - merge type;
 - source row counts;
 - result row count;
-- matched records; and
-- unmatched records.
+- unit-explicit matching diagnostics, such as matched subjects or unmatched keys; and
+- duplicate-key diagnostics where relevant.
 
 TRACE should observe and describe merges rather than replace dataframe merge operations.
 

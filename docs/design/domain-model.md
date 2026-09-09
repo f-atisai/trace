@@ -698,9 +698,8 @@ Examples:
 
 ```json
 {
-  "matched": 4127,
-  "unmatched_left": 3,
-  "unmatched_right": 0
+  "matched_subjects": 720,
+  "unmatched_subjects": 3
 }
 ```
 
@@ -711,7 +710,7 @@ Metrics must:
 - remain machine-readable;
 - use stable semantic names;
 - store values rather than formatted fragments;
-- avoid units embedded in key names where a cleaner structure is possible;
+- state the analytical unit in the key when a shorter name would be ambiguous;
 - permit operation-specific metrics;
 - remain optional.
 
@@ -764,9 +763,9 @@ before
 after
 rows
 columns
-matched
-unmatched_left
-unmatched_right
+matched_subjects
+unmatched_rows
+duplicate_keys
 duration_seconds
 missing
 duplicates
@@ -812,10 +811,12 @@ Examples:
   "left_rows": 720,
   "right_rows": 4127,
   "result_rows": 4127,
-  "matched": 4124,
-  "unmatched_left": 3
+  "matched_subjects": 717,
+  "unmatched_subjects": 3
 }
 ```
+
+The three row-count fields have stable units and may be named operation parameters. Matching diagnostics must state whether they count rows, keys, subjects, or another workflow-specific unit and belong in the generic `metrics` mapping until a stable convention emerges.
 
 ### VALIDATE
 

@@ -49,6 +49,7 @@ def test_render_merge():
             "left_rows": 4127,
             "right_rows": 754,
             "result_rows": 4127,
+            "matched_subjects": 751,
         },
         details={
             "on": "USUBJID",
@@ -59,7 +60,7 @@ def test_render_merge():
     assert render_text(event) == (
         "INFO [MERGE] [ADAE + ADSL] merged – "
         "on=USUBJID, how=left, result=ADAE_ANALYSIS, "
-        "left N=4127, right N=754, result N=4127"
+        "left N=4127, right N=754, result N=4127, matched_subjects=751"
     )
 
 

@@ -56,6 +56,7 @@ with Trace("F14_01", study="PROTO001") as trace:
     km = pd.concat(curves, ignore_index=True)
 
     trace.analyze(
+        "ADTTE",
         "Overall survival",
         method="Kaplan-Meier",
         population="ITT",

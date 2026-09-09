@@ -915,7 +915,7 @@ INFO [END]       [T14_01] execution completed – 00:00:00.19
 
 # 34. When Steps Are Appropriate
 
-Use steps for meaningful logical stages.
+Use steps for meaningful, coarse logical stages. A step should normally correspond to a section heading in the statistical program.
 
 Good:
 
@@ -934,9 +934,10 @@ Create temporary variable x
 Reset index
 Rename column
 Call helper function
+Wrap one FILTER/DERIVE/AGGREGATE call only to obtain another timing event
 ```
 
-A step should help someone reviewing the log understand program structure.
+A step should help someone reviewing the log understand program structure. It should not merely duplicate the semantic helper inside it: each successful step already adds both a `STEP started` and a `STEP completed` line.
 
 ---
 
@@ -944,9 +945,9 @@ A step should help someone reviewing the log understand program structure.
 
 A practical rule:
 
-> If a stage would deserve a short comment or section header in the TLF program, it is probably a reasonable TRACE step.
+> If a stage deserves a short section heading or structural comment in the TLF/ADaM program, it is probably a reasonable TRACE step.
 
-This keeps step instrumentation useful without becoming noisy.
+This keeps step instrumentation useful without becoming noisy. Five successful steps add ten text-log lines; that is proportionate when the scopes expose meaningful program structure, but excessive when each scope wraps a single operation.
 
 ---
 
@@ -1013,6 +1014,8 @@ with trace.step(name):
 **P8-15** — Decorators may be added later but must use the same underlying step semantics.
 
 **P8-16** — Steps remain observational and do not become workflow-control constructs.
+
+**P8-17** — Steps should normally use coarse, section-level granularity rather than wrap individual Tier 1 operations.
 
 ---
 

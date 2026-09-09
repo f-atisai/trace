@@ -109,6 +109,12 @@ An operation must remain meaningful across pandas, Polars, PyArrow, SQL, DuckDB,
 
 Once an operation becomes part of the stable TRACE vocabulary, its meaning must not drift casually. Structured downstream consumers may depend on it.
 
+### 2.6 Object identities are semantic
+
+TRACE object identities should remain meaningful when implementation details change. Prefer stable domain identities such as `ADSL`, `ADAE`, `TEAE_SAFETY`, `demographics_summary`, `Overall survival`, and `T14_01` over implementation-only names such as `df`, `df2`, `tmp`, or `merged_df`.
+
+A semantic identity may happen to match a Python variable, but TRACE must not introspect variable names and treat them as authoritative.
+
 ---
 
 ## 3. Core Operations
@@ -238,7 +244,7 @@ Typical clinical uses include chronological AE processing, by-subject derivation
 
 ### 3.5 DERIVE
 
-**Definition:** `DERIVE` records creation of a new analytical variable, flag, parameter, or value from existing information.
+**Definition:** `DERIVE` records creation of a named analytical concept from existing information, including an analysis variable, parameter, flag, category, endpoint-derived value, or other domain concept that did not previously exist.
 
 **Intent:** Use `DERIVE` when the key semantic event is creation of a new analytical concept.
 
@@ -256,14 +262,14 @@ Typical clinical uses include analysis flags, age groups, baseline flags, treatm
 
 Use `DERIVE` when a new analytical concept is created.
 
-Use `TRANSFORM` when an existing representation is materially changed while its primary semantic identity remains the same.
+Use `TRANSFORM` when representation or structure changes without creating a new analytical concept.
 
 ```text
 AGE → AGEGR1                              DERIVE
 AESTDTC text → parsed date representation TRANSFORM
 ```
 
-The distinction follows statistical intent, not merely whether a new physical Python column is assigned.
+The distinction follows statistical intent, not merely whether a new physical Python column is assigned. A new named analysis variable should normally be `DERIVE` even when its implementation uses recoding, mapping, concatenation, or formatting.
 
 **Avoid as operation synonyms:** `CALCULATE`, `COMPUTE`, `CREATE`, `GENERATE`.
 
@@ -271,7 +277,7 @@ The distinction follows statistical intent, not merely whether a new physical Py
 
 ### 3.6 TRANSFORM
 
-**Definition:** `TRANSFORM` records a material change in representation, structure, normalization, recoding, reshaping, or preparation of an existing analytical object when no more specific TRACE operation better expresses the intent.
+**Definition:** `TRANSFORM` records a material change in representation, structure, normalization, reshaping, or preparation of an existing analytical object when no new analytical concept is created and no more specific TRACE operation better expresses the intent.
 
 **Intent:** `TRANSFORM` is the controlled general-purpose transformation operation. It should not become a catch-all.
 
@@ -280,10 +286,10 @@ Examples:
 ```text
 INFO [TRANSFORM] [AESTDTC] parsed to analysis date
 INFO [TRANSFORM] [LB] reshaped – long to wide
-INFO [TRANSFORM] [SEX] recoded – M/F to Male/Female
+INFO [TRANSFORM] [subject_listing] selected and ordered display columns
 ```
 
-Typical uses include parsing date/time values, recoding representations, reshaping, normalization, standardizing categories, and analytically meaningful type conversion.
+Typical uses include parsing date/time values, representation-only recoding, reshaping, normalization, display preparation, and analytically meaningful type conversion. A join remains `MERGE`, and creation of a named analysis variable remains `DERIVE`, even if either could be described informally as a transformation.
 
 Use a more specific operation when possible:
 
@@ -380,6 +386,8 @@ ANCOVA                             → ANALYZE
 **Definition:** `ANALYZE` records application of a statistical analytical method, estimator, model, inferential procedure, or analysis algorithm whose primary purpose extends beyond simple grouping and reduction.
 
 **Intent:** Use `ANALYZE` for statistical methodology.
+
+An analysis event distinguishes the analytical input from the analysis, endpoint, or estimand identity. For example, Kaplan–Meier estimation may use `ADTTE` as its source and `Overall survival` as its analysis identity; a separately named result such as `km_curve` is the produced analytical object.
 
 Examples:
 

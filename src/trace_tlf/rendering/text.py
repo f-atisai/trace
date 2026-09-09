@@ -132,17 +132,20 @@ def _render_merge(event: TraceEvent) -> str:
         if value is not None:
             parts.append(f"{key}={_display(value)}")
 
+    rendered_metric_keys = set()
     for key, label in (
         ("left_rows", "left N"),
         ("right_rows", "right N"),
         ("result_rows", "result N"),
-        ("matched", "matched"),
-        ("unmatched_left", "unmatched_left"),
-        ("unmatched_right", "unmatched_right"),
     ):
         value = event.metrics.get(key)
         if value is not None:
             parts.append(f"{label}={value}")
+            rendered_metric_keys.add(key)
+
+    for key, value in event.metrics.items():
+        if key not in rendered_metric_keys:
+            parts.append(f"{key}={_display(value)}")
 
     return _join(event.action, ", ".join(parts))
 
@@ -164,7 +167,7 @@ def _render_aggregate(event: TraceEvent) -> str:
 
 def _render_analyze(event: TraceEvent) -> str:
     parts = []
-    for key in ("method", "population", "result"):
+    for key in ("source", "method", "population", "result"):
         value = event.details.get(key)
         if value is not None:
             parts.append(f"{key}={_display(value)}")

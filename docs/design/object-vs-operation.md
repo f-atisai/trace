@@ -119,6 +119,7 @@ trace.merge(
     left_rows=4127,
     right_rows=754,
     result_rows=4127,
+    metrics={"matched_subjects": 720},
 )
 ```
 
@@ -127,6 +128,16 @@ trace.aggregate(
     "ADSL",
     by=["TRT01A", "AGEGR1"],
     result="summary",
+)
+```
+
+```python
+trace.analyze(
+    "ADTTE",
+    "Overall survival",
+    method="Kaplan-Meier",
+    population="ITT",
+    result="km_curve",
 )
 ```
 
@@ -148,6 +159,8 @@ context
 ```
 
 rather than concrete runtime objects.
+
+For `ANALYZE`, the source identity and analysis identity are deliberately separate. In the example above, `ADTTE` is the analytical input, `Overall survival` is the analysis or endpoint identity, and `km_curve` is the produced result.
 
 ---
 
@@ -410,6 +423,8 @@ trace.pandas.merge(
 
 The integration may inspect all three objects and populate structural metrics.
 
+Only row counts remain stable named quantitative fields in Core. Matching diagnostics vary by workflow and unit, so integrations must give them explicit names in `metrics`, such as `matched_rows`, `matched_subjects`, `matched_keys`, or `duplicate_keys`. Core must not guess which unit is meaningful.
+
 The core does not need pandas.
 
 ---
@@ -448,6 +463,20 @@ trace.filter(
 could also be valid if the programmer chooses a semantic object name rather than a physical dataset name.
 
 TRACE should not assume that object identity equals a Python variable name.
+
+Prefer identifiers that survive implementation changes:
+
+```text
+ADSL
+ADAE
+ADLB
+TEAE_SAFETY
+demographics_summary
+km_curve
+T14_01
+```
+
+Avoid implementation-only identifiers such as `df`, `df2`, `tmp`, `x`, or `merged_df`. A semantic identity may happen to match a Python variable name, but the semantic identity is supplied deliberately by the programmer.
 
 ---
 
@@ -676,7 +705,7 @@ Exact packaging is deferred.
 
 # 19. Impact on Tier 1 API
 
-Phase 4 updates the Phase 3 API in one material way.
+Phase 4 originally updated the Phase 3 API by making `read()` semantic and object-independent. The post-prototype reconciliation retains that boundary and further clarifies `MERGE` metrics and `ANALYZE` identities without introducing runtime-object inspection into Core.
 
 ## Before Phase 4
 
@@ -773,9 +802,7 @@ trace.merge(
     left_rows=None,
     right_rows=None,
     result_rows=None,
-    matched=None,
-    unmatched_left=None,
-    unmatched_right=None,
+    metrics=None,
     details=None,
 )
 
@@ -790,7 +817,8 @@ trace.aggregate(
 )
 
 trace.analyze(
-    name,
+    source,
+    analysis,
     *,
     method,
     population=None,
@@ -1091,6 +1119,10 @@ trace.read(
 **P4-11** — Supporting both styles later is acceptable, but they should not initially be overloaded into the same Core method.
 
 **P4-12** — Convenience integration calls must map to semantically equivalent Core events.
+
+**P4-13** — Core `MERGE` exposes unambiguous row-count parameters; workflow-specific diagnostics use explicitly named `metrics` rather than ambiguous matched/unmatched parameters.
+
+**P4-14** — Core `ANALYZE` receives distinct analytical-input and analysis identities. `result` identifies the produced result object or artifact.
 
 ---
 

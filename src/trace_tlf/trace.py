@@ -4,6 +4,7 @@ import logging
 import sys
 import time
 from collections.abc import Mapping, Sequence
+from numbers import Integral, Real
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -322,9 +323,7 @@ class Trace:
         left_rows: int | None = None,
         right_rows: int | None = None,
         result_rows: int | None = None,
-        matched: int | None = None,
-        unmatched_left: int | None = None,
-        unmatched_right: int | None = None,
+        metrics: Mapping[str, Any] | None = None,
         details: Mapping[str, Any] | None = None,
     ) -> TraceEvent:
         self._require_name(left, "left")
@@ -334,9 +333,6 @@ class Trace:
             (left_rows, "left_rows"),
             (right_rows, "right_rows"),
             (result_rows, "result_rows"),
-            (matched, "matched"),
-            (unmatched_left, "unmatched_left"),
-            (unmatched_right, "unmatched_right"),
         ):
             self._require_non_negative_int(value, label)
 
@@ -354,20 +350,20 @@ class Trace:
             how=how,
             result=result,
         )
-        metrics = self._compact_mapping(
-            left_rows=left_rows,
-            right_rows=right_rows,
-            result_rows=result_rows,
-            matched=matched,
-            unmatched_left=unmatched_left,
-            unmatched_right=unmatched_right,
+        event_metrics = self._normalize_mapping(metrics, "metrics")
+        event_metrics.update(
+            self._compact_mapping(
+                left_rows=left_rows,
+                right_rows=right_rows,
+                result_rows=result_rows,
+            )
         )
 
         return self._record(
             operation=Operation.MERGE,
             object=f"{left} + {right}",
             action="merged",
-            metrics=metrics,
+            metrics=event_metrics,
             details=event_details,
         )
 
@@ -408,18 +404,21 @@ class Trace:
 
     def analyze(
         self,
-        name: str,
+        source: str,
+        analysis: str,
         *,
         method: str,
         population: str | None = None,
         result: str | None = None,
         details: Mapping[str, Any] | None = None,
     ) -> TraceEvent:
-        self._require_name(name, "name")
+        self._require_name(source, "source")
+        self._require_name(analysis, "analysis")
         self._require_text(method, "method")
 
         event_details = self._merge_details(
             details,
+            source=source,
             method=method,
             population=population,
             result=result,
@@ -427,7 +426,7 @@ class Trace:
 
         return self._record(
             operation=Operation.ANALYZE,
-            object=name,
+            object=analysis,
             action="analyzed",
             details=event_details,
         )
@@ -570,13 +569,22 @@ class Trace:
         status: Status | str | None,
         severity: Severity = Severity.INFO,
     ) -> TraceEvent:
+        normalized_metrics = {
+            key: self._normalize_numeric(value)
+            for key, value in (metrics or {}).items()
+        }
+        normalized_details = {
+            key: self._normalize_numeric(value)
+            for key, value in (details or {}).items()
+        }
+
         return TraceEvent(
             severity=severity,
             operation=operation,
             object=object,
             action=action,
-            metrics=metrics or {},
-            details=details or {},
+            metrics=normalized_metrics,
+            details=normalized_details,
             status=status,
             context=self._event_context(),
         )
@@ -621,10 +629,20 @@ class Trace:
     ) -> None:
         if value is None:
             return
-        if isinstance(value, bool) or not isinstance(value, int):
-            raise TypeError(f"{label} must be an int or None")
+        if isinstance(value, bool) or not isinstance(value, Integral):
+            raise TypeError(f"{label} must be an integral value or None")
         if value < 0:
             raise ValueError(f"{label} must be >= 0")
+
+    @staticmethod
+    def _normalize_numeric(value: Any) -> Any:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, Integral):
+            return int(value)
+        if isinstance(value, Real):
+            return float(value)
+        return value
 
     @staticmethod
     def _normalize_string_or_sequence(
@@ -650,7 +668,7 @@ class Trace:
     @staticmethod
     def _compact_mapping(**values: Any) -> dict[str, Any]:
         return {
-            key: value
+            key: Trace._normalize_numeric(value)
             for key, value in values.items()
             if value is not None
         }
@@ -701,7 +719,10 @@ class Trace:
             return {}
         if not isinstance(value, Mapping):
             raise TypeError(f"{label} must be a mapping or None")
-        return dict(value)
+        return {
+            key: Trace._normalize_numeric(item)
+            for key, item in value.items()
+        }
 
     @staticmethod
     def _normalize_status(

@@ -1,11 +1,26 @@
 # TRACE Reference Prototype Findings
 
 **Sprint:** 9 — Friction review  
-**Status:** Design review after the reference prototype
+**Status:** Findings reconciled into the governing design documents
 
 The six Sprint 8 programs were reviewed as API exercises rather than implementation tests. The measurements are intentionally approximate: “statistical-program lines” is a friction indicator excluding imports, synthetic fixture construction, TRACE calls, and step declarations.
 
+## Reconciliation status
+
+The Sprint 9 findings recorded here have now been reconciled into the governing Phase 1, 3, 4, and 8 design documents. This file remains the historical record of what the reference prototype revealed; the governing documents define the current API and semantics.
+
+The resulting amendments are:
+
+- `MERGE` retains `left_rows`, `right_rows`, and `result_rows`, removes the ambiguous named matched/unmatched parameters, and accepts workflow-specific diagnostics through explicitly named `metrics`.
+- `ANALYZE` takes distinct `source` and `analysis` identities; `result` continues to identify the produced result object or artifact.
+- `DERIVE` creates a named analytical concept, while `TRANSFORM` changes representation or structure without creating one.
+- semantic object identities remain programmer-supplied and variable-name introspection remains prohibited.
+- step scopes remain structurally unchanged but should normally correspond to coarse program sections.
+- the reference prototype normalizes safely compatible NumPy/pandas integral and real scalar values to ordinary Python numerics.
+
 ## Prototype measurements
+
+These measurements remain the original pre-reconciliation snapshot; they are not recomputed from the amended prototype examples.
 
 | Prototype | Emitted TRACE lines | Statistical-program lines | Semantic TRACE calls | Explicit steps | Approx. calls per logical stage |
 | --- | ---: | ---: | ---: | ---: | --- |
@@ -60,6 +75,18 @@ The guidance needs to be sharper: DERIVE creates a named analytical concept/vari
 
 `trace.analyze("Overall survival", method="Kaplan-Meier", ...)` felt natural, but `"Overall survival"` is an analysis/endpoint identity, not a dataset. Passing `"ADTTE"` would instead identify the input but lose the analysis identity. Phase 3/4 should explicitly define what `name` means for ANALYZE.
 
+This paragraph records the superseded prototype-era one-identity form. Reconciliation resolved the ambiguity by retaining both identities:
+
+```python
+trace.analyze(
+    "ADTTE",
+    "Overall survival",
+    method="Kaplan-Meier",
+    population="ITT",
+    result="km_curve",
+)
+```
+
 ## Intermediate object naming requires discipline
 
 Source datasets and outputs are obvious; intermediate objects such as `TEAE_SAFETY`, `ADLB_WORK`, `demographics_summary`, and `km_curve` require programmer-created semantic names. This is preferable to variable-name introspection, but TRACE needs naming guidance.
@@ -78,19 +105,19 @@ Lifecycle itself was not noisy: two program-level lines are proportionate. The n
 
 This is a good result, but worth monitoring. The Kaplan–Meier example used `details` for method-specific metadata such as time, censor, and strata variables. Those fields should stay in `details` until repeated use across statistical methods demonstrates a stable public parameter.
 
-# What should change
+# Decisions resulting from the findings
 
-1. **Reopen Phase 3/4 narrowly for MERGE.** Keep `left_rows`, `right_rows`, and `result_rows`. Remove or rename ambiguous `matched`, `unmatched_left`, and `unmatched_right` unless their units are explicit. Method-specific/key-level diagnostics can live in `metrics` until a stable convention emerges.
+1. **Phase 3/4 — MERGE reconciled.** Keep `left_rows`, `right_rows`, and `result_rows`. Remove the ambiguous `matched`, `unmatched_left`, and `unmatched_right` named parameters. Method-specific/key-level diagnostics live in `metrics` with names that state their unit, such as `matched_subjects` or `unmatched_rows`.
 
-2. **Clarify ANALYZE in Phase 3/4.** The first argument should represent the analysis identity (for example, `"Overall survival"`), not implicitly the input dataset. Input objects can be metadata when needed.
+2. **Phase 3/4 — ANALYZE reconciled.** Use `trace.analyze(source, analysis, method=...)`. The first argument identifies the analytical input and the second identifies the analysis, endpoint, or estimand. `result` remains reserved for the produced result.
 
-3. **Strengthen DERIVE vs TRANSFORM guidance in Phase 1/3.** Keep both operations, but define DERIVE as creating a named analytical concept and TRANSFORM as changing representation/structure.
+3. **Phase 1/3 — DERIVE vs TRANSFORM reconciled.** Keep both operations, define DERIVE as creating a named analytical concept, and define TRANSFORM as changing representation/structure without creating one.
 
-4. **Normalize statistical numeric scalar types in implementation.** Accept safely normalizable NumPy/pandas integral/real scalars. This does not require reopening the domain model.
+4. **Prototype implementation reconciled.** Accept safely normalizable NumPy/pandas integral/real scalars and normalize them to ordinary Python numerics. This does not reopen the domain model.
 
-5. **Document semantic object naming.** Prefer stable domain identities over Python variable names. Do not introduce variable-name introspection.
+5. **Phase 4 naming guidance reconciled.** Prefer stable domain identities over Python variable names. Do not introduce variable-name introspection.
 
-6. **Document coarse step granularity.** A step should normally correspond to a section heading in a statistical program.
+6. **Phase 8 granularity reconciled.** A step should normally correspond to a section heading in a statistical program.
 
 # What should remain frozen
 
@@ -118,16 +145,16 @@ Do not add Kaplan–Meier-specific parameters to `analyze()`. Its `details` usag
 
 Do not add logger-style `trace.info()`, `trace.warning()`, or similar APIs. Nothing in the prototypes created a need for them.
 
-# Phase reopening decision
+# Phase reconciliation outcome
 
 The reference prototype does **not** justify a broad redesign of Phases 0–8.
 
-Three narrow design follow-ups are justified before production implementation:
+Three narrow design amendments were incorporated before production implementation:
 
-1. **Phase 3/4 — MERGE:** resolve matched/unmatched metric semantics and units.
-2. **Phase 3/4 — ANALYZE:** define the semantic identity of its first argument.
-3. **Phase 1/3 — DERIVE vs TRANSFORM:** sharpen classification guidance and examples.
+1. **Phase 3/4 — MERGE:** ambiguous matched/unmatched parameters were removed in favor of unit-explicit `metrics`.
+2. **Phase 3/4 — ANALYZE:** analytical input and analysis identity are separate arguments.
+3. **Phase 1/3 — DERIVE vs TRANSFORM:** classification guidance and examples were sharpened.
 
-Separately, later implementation should normalize common statistical numeric scalar types.
+The reference prototype also normalizes common statistical numeric scalar types.
 
-Everything else should remain frozen or deferred. The next activity should be a **small API reconciliation pass focused only on these findings**, not another feature sprint.
+Everything else remains frozen or deferred. No broad redesign or production feature sprint resulted from this review.

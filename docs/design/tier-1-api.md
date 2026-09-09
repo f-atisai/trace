@@ -164,6 +164,8 @@ trace.derive(
 
 `source` may later accept either a single source or multiple sources.
 
+Use `DERIVE` whenever the result is a named analytical concept, including an analysis variable, parameter, flag, category, or endpoint-derived value. This remains true when the implementation uses recoding, mapping, concatenation, or formatting.
+
 ## `trace.transform()`
 
 ```python
@@ -181,12 +183,14 @@ Example:
 
 ```python
 trace.transform(
-    "AESTDTC",
-    "parsed to analysis date",
+    "subject_listing",
+    "selected and ordered display columns",
+    source="ADSL",
+    result="listing_display",
 )
 ```
 
-`TRANSFORM` remains the controlled general-purpose operation and should not replace more specific operations.
+`TRANSFORM` changes representation or structure without creating a new analytical concept. It remains the controlled general-purpose operation and should not replace a more specific operation such as `DERIVE` or `MERGE`.
 
 ## `trace.merge()`
 
@@ -201,9 +205,7 @@ trace.merge(
     left_rows=None,
     right_rows=None,
     result_rows=None,
-    matched=None,
-    unmatched_left=None,
-    unmatched_right=None,
+    metrics=None,
     details=None,
 )
 ```
@@ -236,6 +238,25 @@ trace.merge(
 
 `*_rows` is preferred over `*_n` for clarity and consistency.
 
+`left_rows`, `right_rows`, and `result_rows` are stable named parameters because their units are explicit. Matching diagnostics are workflow-dependent: "matched" may mean rows, keys, subjects, or another analytical unit. Record them through `metrics` using an explicit unit-bearing name:
+
+```python
+trace.merge(
+    "ADAE",
+    "ADSL",
+    on="USUBJID",
+    how="inner",
+    result="TEAE_SAFETY",
+    left_rows=len(teae),
+    right_rows=len(safety),
+    result_rows=len(merged),
+    metrics={
+        "matched_subjects": matched_subjects,
+        "unmatched_subjects": unmatched_subjects,
+    },
+)
+```
+
 ## `trace.aggregate()`
 
 ```python
@@ -266,7 +287,8 @@ trace.aggregate(
 
 ```python
 trace.analyze(
-    name,
+    source,
+    analysis,
     *,
     method,
     population=None,
@@ -279,13 +301,19 @@ Example:
 
 ```python
 trace.analyze(
-    "OS",
+    "ADTTE",
+    "Overall survival",
     method="Kaplan-Meier",
     population="ITT",
+    result="km_curve",
 )
 ```
 
-`ANALYZE` is Tier 1 because statistical procedures are central to clinical statistical programming.
+`source` is the analytical input identity. `analysis` is the analysis, endpoint, or estimand identity. `method` names the statistical method or model, while `result` remains reserved for the produced result object or artifact. This reads as: analyze `ADTTE` for `Overall survival` using Kaplan–Meier.
+
+The one-identity form is not used because it forces a choice between identifying the analytical input and identifying the analysis. Overloading `result` with the analysis identity is also rejected because a result is a distinct produced object.
+
+`ANALYZE` is Tier 1 because statistical procedures are central to clinical statistical programming. Method-specific metadata remains in `details` until repeated use establishes a stable cross-method parameter.
 
 ## `trace.validate()`
 
@@ -354,6 +382,7 @@ Exceptions follow natural semantics:
 trace.read(data, "ADSL")
 trace.merge("ADAE", "ADSL", ...)
 trace.derive("AGEGR1", ...)
+trace.analyze("ADTTE", "Overall survival", method="Kaplan-Meier")
 ```
 
 Descriptions central to the event may be positional:
@@ -501,9 +530,7 @@ trace.merge(
     left_rows=None,
     right_rows=None,
     result_rows=None,
-    matched=None,
-    unmatched_left=None,
-    unmatched_right=None,
+    metrics=None,
     details=None,
 )
 
@@ -518,7 +545,8 @@ trace.aggregate(
 )
 
 trace.analyze(
-    name,
+    source,
+    analysis,
     *,
     method,
     population=None,
@@ -642,15 +670,15 @@ trace.output(
 
 **P3-04** — Common calls should usually require no more than one or two positional arguments.
 
-**P3-05** — Stable operation-specific metrics get named parameters.
+**P3-05** — Stable operation-specific metrics with unambiguous units get named parameters.
 
-**P3-06** — Generic `metrics` is reserved for inherently variable measurements.
+**P3-06** — Generic `metrics` is reserved for inherently variable measurements, including merge diagnostics whose analytical unit varies by workflow.
 
 **P3-07** — `details` is the structured escape hatch for uncommon metadata.
 
 **P3-08** — Logging infrastructure is not exposed through Tier 1 methods.
 
-**P3-09** — `ANALYZE` is included in Tier 1.
+**P3-09** — `ANALYZE` is included in Tier 1 and takes distinct `source` and `analysis` identities.
 
 **P3-10** — Tier 1 must continue to satisfy the Phase 2 friction budget.
 
