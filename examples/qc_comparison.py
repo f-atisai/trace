@@ -3,7 +3,7 @@
 Representative TRACE output:
     INFO [READ] [T14_01_PRODUCTION] loaded – rows=6, columns=5
     INFO [READ] [T14_01_QC] loaded – rows=6, columns=5
-    INFO [MERGE] [T14_01_PRODUCTION + T14_01_QC] merged – left_rows=6, right_rows=6, result_rows=6
+    INFO [MERGE] [T14_01_PRODUCTION + T14_01_QC] merged
     INFO [VALIDATE] [T14_01] production and QC keys match – PASS
     INFO [VALIDATE] [T14_01] production and QC statistics match – PASS
     INFO [OUTPUT] [QC_T14_01] written – example-output/qc_comparison.csv
@@ -24,9 +24,18 @@ from trace_tlf import Trace
 OUTPUT_DIR = Path("example-output")
 OUTPUT_DIR.mkdir(exist_ok=True)
 
+TREATMENTS = [
+    "Placebo",
+    "Placebo",
+    "Placebo",
+    "Drug A 100 mg",
+    "Drug A 100 mg",
+    "Drug A 100 mg",
+]
+
 production = pd.DataFrame(
     {
-        "TRT01A": ["Placebo", "Placebo", "Placebo", "Drug A 100 mg", "Drug A 100 mg", "Drug A 100 mg"],
+        "TRT01A": TREATMENTS,
         "STAT": ["N", "MEAN", "SD", "N", "MEAN", "SD"],
         "PARAM": ["AGE"] * 6,
         "VALUE": [118.0, 58.4, 12.6, 121.0, 60.1, 11.9],
@@ -36,7 +45,7 @@ production = pd.DataFrame(
 
 qc = pd.DataFrame(
     {
-        "TRT01A": ["Placebo", "Placebo", "Placebo", "Drug A 100 mg", "Drug A 100 mg", "Drug A 100 mg"],
+        "TRT01A": TREATMENTS,
         "STAT": ["N", "MEAN", "SD", "N", "MEAN", "SD"],
         "PARAM": ["AGE"] * 6,
         "VALUE": [118.0, 58.4, 12.6, 121.0, 60.1, 11.9],
@@ -76,7 +85,9 @@ with Trace("QC_T14_01", study="STUDY01") as trace:
         left_rows=len(production),
         right_rows=len(qc),
         result_rows=len(comparison),
-        metrics={"unmatched_keys": int((comparison["_merge"] != "both").sum())},
+        metrics={
+            "unmatched_keys": int((comparison["_merge"] != "both").sum())
+        },
     )
 
     keys_match = bool((comparison["_merge"] == "both").all())
@@ -84,7 +95,9 @@ with Trace("QC_T14_01", study="STUDY01") as trace:
         "T14_01",
         "production and QC keys match",
         passed=keys_match,
-        metrics={"unmatched_keys": int((comparison["_merge"] != "both").sum())},
+        metrics={
+            "unmatched_keys": int((comparison["_merge"] != "both").sum())
+        },
     )
 
     value_match = comparison["VALUE_PROD"].eq(comparison["VALUE_QC"])
