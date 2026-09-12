@@ -83,7 +83,7 @@ with Trace("FIGURE_OS_KM", study="CDISC Pilot") as trace:
         for treatment in os_data[treatment_column].unique().sort().to_list():
             group = os_data.filter(pl.col(treatment_column) == treatment)
             durations = group["AVAL"].to_numpy()
-            event_observed = (group["CNSR"].to_numpy() == 0)
+            event_observed = group["CNSR"].to_numpy() == 0
 
             kmf.fit(
                 durations=durations,
@@ -93,11 +93,14 @@ with Trace("FIGURE_OS_KM", study="CDISC Pilot") as trace:
             kmf.plot_survival_function(ax=axis)
 
             survival = kmf.survival_function_.reset_index()
-            curve_frames.append(pl.from_pandas(survival).with_columns(
-                pl.lit(str(treatment)).alias("treatment")
-            ))
+            survival.columns = ["timeline", "survival"]
+            curve_frames.append(
+                pl.from_pandas(survival).with_columns(
+                    pl.lit(str(treatment)).alias("treatment")
+                )
+            )
 
-        km_curves = pl.concat(curve_frames, how="diagonal")
+        km_curves = pl.concat(curve_frames)
         trace.analyze(
             "Overall Survival Analysis Set",
             "Overall Survival",
@@ -112,19 +115,11 @@ with Trace("FIGURE_OS_KM", study="CDISC Pilot") as trace:
             },
         )
 
-        probability_columns = [
-            column
-            for column in km_curves.columns
-            if column not in {"timeline", "treatment"}
-        ]
-        probabilities_valid = all(
-            km_curves[column].is_between(0.0, 1.0).all()
-            for column in probability_columns
-        )
+        probabilities_valid = km_curves["survival"].is_between(0.0, 1.0).all()
         trace.validate(
             "km_survival_curves",
             "survival probabilities remain within [0, 1]",
-            passed=probabilities_valid,
+            passed=bool(probabilities_valid),
             metrics={"curve_rows": km_curves.height},
         )
 
