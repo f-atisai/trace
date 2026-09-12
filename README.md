@@ -2,34 +2,26 @@
 
 **TRACE — Transparent Reporting and Auditable Code Execution**
 
-TRACE is an open-source Python library for statistical programming, implementing the TRACE framework for transparent, consistent, and auditable execution logs.
+TRACE is an open-source Python library for statistical programming that implements the TRACE framework for transparent, consistent, and reviewable execution logs.
 
-The project is intended to make useful execution logging easy to add to statistical programs without requiring programmers to repeatedly construct logging messages or work directly with Python logging configuration.
+TRACE is designed to make useful execution logging easy to add to statistical programs without requiring programmers to construct repetitive messages or work directly with Python logging configuration.
 
-> TRACE is under development. The API examples and project structure described here are design targets and may change before v1.0.
+> **Status:** TRACE is under active development. The current focus is API design and initial Python implementation; the public API may change before v1.0.
 
-## Project Status
+## Goals
 
-TRACE is currently under active development.
+TRACE provides a lightweight, domain-aware logging layer for statistical programming. It builds on Python's standard `logging` infrastructure rather than replacing it.
 
-Current focus: API design and initial Python implementation.
-
-The public API may change before v1.0.
-
-## Project Goals
-
-TRACE aims to provide a lightweight, domain-aware logging layer for statistical programming. The library will build on Python's standard `logging` infrastructure rather than replace it.
-
-The initial design focuses on:
+The design focuses on:
 
 - simple configuration;
-- consistent TRACE message generation;
-- statistical-programming-aware operations such as READ, FILTER, DERIVE, MERGE, VALIDATE, and OUTPUT;
-- optional DataFrame-aware logging;
-- step and function instrumentation; and
-- clean, review-ready log files.
+- a controlled statistical-programming vocabulary;
+- structured execution evidence for operations such as READ, FILTER, DERIVE, MERGE, ANALYZE, VALIDATE, and OUTPUT;
+- optional runtime-object integrations for observed diagnostics;
+- lifecycle and step instrumentation; and
+- concise, review-ready log output.
 
-A future TRACE program should be able to read naturally:
+Example direction:
 
 ```python
 from trace_tlf import Trace
@@ -42,8 +34,6 @@ trace.derive("AGEGR1", dataset="ADSL", source="AGE")
 trace.output("T14_01", "outputs/tables/T14_01.rtf")
 ```
 
-with output resembling:
-
 ```text
 INFO [READ] [ADSL] loaded – N=754, Vars=16
 INFO [FILTER] [ADSL] SAFFL == 'Y' applied – N=754 → 720
@@ -51,82 +41,35 @@ INFO [DERIVE] [AGEGR1] created – dataset=ADSL, source=AGE
 INFO [OUTPUT] [T14_01] written – outputs/tables/T14_01.rtf
 ```
 
-These examples describe the intended API direction; they are not yet a stable public contract.
+## Framework and Python implementation
 
-## TRACE Framework and TRACE Python
+- **TRACE Framework** defines the conventions, vocabulary, message grammar, severity guidance, and methodology for execution logging in statistical programming.
+- **TRACE Python** implements those conventions for Python statistical programs.
 
-The project distinguishes between two related concepts:
+Keeping the framework distinct from the implementation leaves room for future implementations in other languages.
 
-- **TRACE Framework** — the conventions, vocabulary, message grammar, severity guidance, and methodology for execution logging in statistical programming.
-- **TRACE Python** — the Python library that implements those conventions.
+## Documentation
 
-Keeping the framework separate from the implementation makes the methodology portable and leaves room for future implementations in other programming languages.
+- [`docs/framework/`](docs/framework/) — normative TRACE framework specifications.
+- [`docs/api/`](docs/api/) — public Python API reference.
+- [`docs/guides/`](docs/guides/) — task-oriented guides and examples.
+- [`docs/design/`](docs/design/) — design decisions, research, prototype findings, and architecture history.
 
-## Repository Structure
+The active design roadmap begins in [`docs/design/api-design-plan.md`](docs/design/api-design-plan.md). The design documentation index explains which document is authoritative for each concept.
 
-```text
-trace/
-├── src/
-│   └── trace_tlf/
-├── tests/
-├── docs/
-│   ├── framework/
-│   ├── api/
-│   ├── guides/
-│   └── design/
-├── examples/
-├── README.md
-├── CONTRIBUTING.md
-├── CHANGELOG.md
-├── LICENSE
-├── pyproject.toml
-└── .github/
-```
+## Package naming
 
-The repository intentionally keeps the library, API documentation, framework documentation, guides, and design records together.
-
-### Documentation
-
-- `docs/framework/` — normative TRACE framework documentation and conventions.
-- `docs/api/` — public Python API reference and API documentation.
-- `docs/guides/` — task-oriented user guides and clinical-programming examples.
-- `docs/design/` — pre-implementation API design, architectural decisions, and design notes.
-
-The active API design plan begins in [`docs/design/api-design-plan.md`](docs/design/api-design-plan.md).
-
-## Package Naming
-
-The project is branded **TRACE**, while the Python import package uses `trace_tlf`:
+The project is branded **TRACE**, while the Python import package uses `trace_tlf` to avoid conflict with Python's standard-library `trace` module:
 
 ```python
 from trace_tlf import Trace
 ```
 
-This avoids conflicting with Python's standard-library `trace` module.
-
-The intended distribution name is currently `trace-tlf`, subject to package-name availability and final naming review before publication to PyPI.
-
-## Versioning
-
-TRACE follows [Semantic Versioning](https://semver.org/) for public releases.
-
-During initial development, versions remain below `1.0.0`, for example:
-
-```text
-0.1.0
-0.2.0
-0.5.0
-...
-1.0.0
-```
-
-Before `1.0.0`, the public API may evolve as the design is validated through implementation and real statistical-programming use cases. `1.0.0` will mark the first stable public API contract.
+The intended distribution name is `trace-tlf`, subject to final package-name review before publication.
 
 ## Installation
 
-TRACE is not yet published as an installable release.
-
-Once the first development release is available, installation is expected to follow the standard Python package workflow:
+TRACE is not yet published as an installable release. A future development release is expected to use the standard Python package workflow:
 
 ```bash
 pip install trace-tlf
@@ -134,32 +77,23 @@ pip install trace-tlf
 
 ## Development
 
-Clone the repository and install the development dependencies:
-
 ```bash
 git clone https://github.com/f-atisai/trace.git
 cd trace
 python -m pip install -e ".[dev]"
 ```
 
-Run the test suite:
+Run checks with:
 
 ```bash
 pytest
-```
-
-Run static checks:
-
-```bash
 ruff check .
 mypy src
 ```
 
 ## Contributing
 
-TRACE is in an early design stage. Contributions, API-design discussion, clinical-programming use cases, and implementation feedback are welcome.
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+Contributions, API-design discussion, clinical-programming use cases, and implementation feedback are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 ## License
 
