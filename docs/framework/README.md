@@ -9,7 +9,9 @@ A clean TRACE execution does not establish statistical correctness or replace sp
 ## Specifications
 
 - [`core-operations-v0.1.md`](core-operations-v0.1.md) defines the canonical statistical-operation vocabulary.
+- [`reviewer-guide.md`](reviewer-guide.md) explains how to review a statistical program using TRACE.
 - [`../design/domain-model.md`](../design/domain-model.md) defines the structured event model.
-- [`../design/reviewer-experience.md`](../design/reviewer-experience.md) defines the reviewer model and execution-evidence boundaries.
+- [`../design/reviewer-experience.md`](../design/reviewer-experience.md) defines the reviewer model and diagnostic-evidence boundaries.
+- [`../design/provenance.md`](../design/provenance.md) defines program-level execution provenance.
 
 Concepts are defined in their authoritative documents rather than repeated here. See the [`docs/design` index](../design/README.md) for documentation ownership.
