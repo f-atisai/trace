@@ -2,9 +2,9 @@ import inspect
 
 import pytest
 
-from trace_tlf import Trace
 from trace_tlf.operations import Operation
 from trace_tlf.rendering import render_text
+from trace_tlf import Trace
 
 
 EXPECTED_METHOD_PARAMETERS = {
@@ -94,7 +94,10 @@ def test_common_tier1_metadata_is_keyword_only():
     signature = inspect.signature(Trace.filter)
 
     assert signature.parameters["name"].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
-    assert signature.parameters["condition"].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+    assert (
+        signature.parameters["condition"].kind
+        is inspect.Parameter.POSITIONAL_OR_KEYWORD
+    )
     assert signature.parameters["result"].kind is inspect.Parameter.KEYWORD_ONLY
     assert signature.parameters["before"].kind is inspect.Parameter.KEYWORD_ONLY
     assert signature.parameters["after"].kind is inspect.Parameter.KEYWORD_ONLY
