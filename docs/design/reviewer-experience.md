@@ -2,7 +2,7 @@
 
 **Phase:** 10 — Define the TRACE Reviewer Experience  
 **Status:** Active design specification  
-**Scope:** Reviewer model, execution evidence, provenance, and Phase 10 validation goals
+**Scope:** Reviewer model, diagnostic evidence, and Phase 10 validation goals
 
 ## 1. Purpose
 
@@ -51,13 +51,11 @@ reviewable execution evidence
 |---|---|---|
 | Semantic event | What analytical activity occurred? | `READ`, `FILTER`, `MERGE`, `ANALYZE`, `OUTPUT` |
 | Diagnostic | What measurable evidence describes that activity? | row counts, subject counts, duplicates, result dimensions |
-| Program-level provenance | Which execution and artifacts does this log belong to? | program, run ID, timestamp, input/output artifacts |
+| Program-level provenance | Which execution and artifacts does this log belong to? | program, run ID, timestamps, input/output artifacts |
 
-### 3.1 Semantic events
+Semantic-event vocabulary is defined in [`../framework/core-operations-v0.1.md`](../framework/core-operations-v0.1.md). Program-level provenance is defined in [`provenance.md`](provenance.md).
 
-Semantic events describe what kind of statistical-programming activity occurred. Their vocabulary and boundaries are defined in [`../framework/core-operations-v0.1.md`](../framework/core-operations-v0.1.md).
-
-### 3.2 Diagnostic evidence
+### 3.1 Diagnostic evidence
 
 A diagnostic is a measurable fact or value associated with an operation. Examples include row counts, column counts, subject counts, duplicate counts, merge dimensions, validation measurements, and artifact properties.
 
@@ -85,7 +83,7 @@ When TRACE reports:
 rows=249
 ```
 
-the reviewer should be able to distinguish these cases:
+the reviewer should be able to distinguish:
 
 ```text
 Observed: TRACE inspected the runtime object and counted 249 rows.
@@ -95,11 +93,11 @@ Derived:  TRACE calculated 249 from other recorded diagnostics.
 
 TRACE must not present these cases as equivalent evidence.
 
-The initial Core API may continue accepting supplied diagnostics. This sprint does not require runtime-object inspection or change Tier 1 signatures. Future integrations can convert common diagnostics from supplied to observed evidence without changing operation semantics, consistent with [`object-vs-operation.md`](object-vs-operation.md).
+Core may continue accepting supplied diagnostics. Future integrations can convert common diagnostics from supplied to observed evidence without changing operation semantics, consistent with [`object-vs-operation.md`](object-vs-operation.md).
 
 #### Derivation rule
 
-A derived value must identify its source diagnostics internally so its origin remains explainable. For example:
+A derived value must identify its source diagnostics internally so its origin remains explainable:
 
 ```text
 before_rows=254  observed
@@ -119,7 +117,7 @@ A useful event may therefore be:
 INFO [DERIVE] [AGEGR1] created – dataset=ADSL, source=AGE
 ```
 
-without a row count. Missing optional diagnostics should mean only that TRACE did not record that evidence; it should not imply zero, failure, or an incomplete execution.
+without a row count. Missing optional diagnostics means only that TRACE did not record that evidence.
 
 #### Operation-oriented diagnostic categories
 
@@ -128,22 +126,22 @@ The following categories describe high-value diagnostics rather than mandatory f
 | Operation | Useful diagnostics | Notes |
 |---|---|---|
 | `READ` | `rows`, `columns` | Integrations can observe object dimensions; Core callers may supply them. |
-| `CHECK` | check-specific metrics | Units should be explicit where ambiguity is possible, e.g. `missing_subjects` rather than `missing`. |
-| `FILTER` | `before_rows`, `after_rows`, `removed_rows` | `removed_rows` may be derived when before/after counts are available. |
-| `SORT` | usually none | Sort keys are semantic/structural metadata, not diagnostics. |
+| `CHECK` | check-specific metrics | Use explicit units where ambiguity is possible. |
+| `FILTER` | `before_rows`, `after_rows`, `removed_rows` | `removed_rows` may be derived. |
+| `SORT` | usually none | Sort keys are semantic/structural metadata. |
 | `DERIVE` | derivation-specific metrics where useful | Do not add counts merely for consistency. |
-| `TRANSFORM` | input/result dimensions where material | Especially useful for reshape or pivot operations. |
+| `TRANSFORM` | input/result dimensions where material | Useful for reshape or pivot operations. |
 | `MERGE` | `left_rows`, `right_rows`, `result_rows`; explicit-unit match diagnostics | Prefer `matched_subjects` or `unmatched_keys` over ambiguous `matched`. |
 | `AGGREGATE` | `input_rows`, `result_rows`; analysis-unit counts where useful | Distinguish rows from subjects or groups. |
-| `ANALYZE` | method-specific diagnostics only when reviewer-relevant | Model results are not automatically TRACE diagnostics; avoid reproducing statistical output in the log. |
-| `VALIDATE` | observed comparison metric(s), expected criterion where needed, status | `PASS`/`FAIL` records the validation outcome; diagnostic origin still matters. |
-| `OUTPUT` | artifact size and optional hash where available | Artifact identity belongs to output/provenance semantics; hashes are addressed by the provenance design. |
+| `ANALYZE` | method-specific diagnostics only when reviewer-relevant | Avoid reproducing statistical output in the log. |
+| `VALIDATE` | comparison metric(s), expected criterion where needed, status | Diagnostic origin still matters. |
+| `OUTPUT` | artifact properties where reviewer-relevant | Physical artifact identity and hashes belong to program-level provenance. |
 
-Existing prototype names such as `before`, `after`, and `rows` may remain until API reconciliation. The conceptual model uses explicit units (`before_rows`, `after_rows`, `input_rows`, `result_rows`) to prevent a reviewer from assuming that an unqualified count represents subjects rather than records.
+Existing prototype names such as `before`, `after`, and `rows` may remain until API reconciliation. The conceptual model uses explicit units where an unqualified count could be mistaken for subjects, records, keys, or groups.
 
 #### Validation evidence
 
-`VALIDATE` combines an expectation with an outcome. For example:
+`VALIDATE` combines an expectation with an outcome:
 
 ```text
 VALIDATE [ADSL] USUBJID uniqueness – FAIL, duplicate_subjects=2
@@ -151,48 +149,7 @@ VALIDATE [ADSL] USUBJID uniqueness – FAIL, duplicate_subjects=2
 
 The failure status is semantic validation evidence. The diagnostic `duplicate_subjects=2` may independently be observed, supplied, or derived.
 
-A validation does not become stronger merely because the programmer passes `passed=True`. Future integrations or validation helpers may be able to observe the relevant metric and derive the outcome, but that is an implementation decision for a later phase.
-
-### 3.3 Program-level provenance
-
-Execution provenance is recorded once at program level rather than repeated across semantic events.
-
-Initial Phase 10 provenance consists of:
-
-```text
-program
-run_id
-executed_at
-input_artifacts
-output_artifacts
-optional artifact hashes
-```
-
-Its purpose is to answer:
-
-> Which execution and physical artifacts does this TRACE log belong to?
-
-A reviewer-facing provenance block may look like:
-
-```text
-TRACE EXECUTION
-
-Program:  T14_01
-Run ID:   7eab...
-Executed: 2026-09-12T10:42:18Z
-
-Input artifacts:
-  data/adam/adsl.parquet
-  sha256: 8f31...
-
-Output artifacts:
-  outputs/tlf_population.rtf
-  sha256: a791...
-```
-
-Hashes are optional artifact identifiers. Broader environment fingerprinting—Git state, Python/package versions, operating system, hostname, or user identity—remains out of scope until a concrete need justifies it.
-
-The exact API and storage model for provenance are deferred to the provenance design sprint.
+A validation does not become stronger merely because the programmer passes `passed=True`. Future integrations or validation helpers may observe the relevant metric and derive the outcome, but that is a later implementation decision.
 
 ## 4. Reviewer interpretation
 
@@ -208,7 +165,8 @@ For example:
 TRACE EXECUTION
 Program: T14_01
 Run ID:  7eab...
-Executed: 2026-09-12T10:42:18Z
+Started: 2026-09-12T10:42:18Z
+Ended:   2026-09-12T10:42:19Z
 Inputs:  data/adam/adsl.parquet
 Outputs: outputs/t14_01.rtf
 
@@ -219,7 +177,9 @@ WARN [VALIDATE] [ADSL] USUBJID uniqueness – FAIL, duplicate_subjects=17
 INFO [OUTPUT]   [T14_01] written – outputs/t14_01.rtf
 ```
 
-A future structured representation must retain diagnostic origins even if the concise text rendering does not label every value inline. Machine-readable output, reviewer tooling, or an expanded rendering should be able to expose the distinction. TRACE must not discard origin metadata merely to keep the text log compact.
+The provenance block identifies the run and artifacts once. Its detailed semantics are owned by [`provenance.md`](provenance.md).
+
+A future structured representation must retain diagnostic origins even if concise text rendering does not label every value inline. Machine-readable output, reviewer tooling, or an expanded rendering should be able to expose the distinction.
 
 ## 5. Quarto and conventional Python
 
@@ -268,8 +228,6 @@ Phase 10 should validate whether a reviewer can answer:
 8. Can the reviewer reconcile TRACE evidence with the source or Quarto document and resulting output?
 9. Does TRACE expose this evidence without implying that execution evidence proves statistical correctness?
 
-Phase 10 does not require runtime DataFrames in Core, infer Python variable names, capture subject-level clinical data by default, or expand provenance without a demonstrated requirement.
-
 When completeness and readability conflict, TRACE should optimize for **accurate, proportionate, reviewable evidence**. More logging is not automatically better evidence.
 
 ## 8. Phase 10.4 decisions
@@ -282,14 +240,12 @@ When completeness and readability conflict, TRACE should optimize for **accurate
 - Diagnostic units should be explicit whenever a count could mean rows, subjects, keys, groups, or another analytical unit.
 - Diagnostics are optional and operation-specific; TRACE should not collect metrics solely for uniformity.
 - Structured TRACE representations must preserve diagnostic origin even when concise text rendering omits origin labels.
-- Phase 10.4 defines semantics only. No pandas, Polars, PyArrow, or other runtime inspection is implemented in this sprint.
 
-## 9. Relationship to earlier design work
+## 9. Related design work
 
-- [`domain-model.md`](domain-model.md) owns event structure and core domain concepts.
-- [`../framework/core-operations-v0.1.md`](../framework/core-operations-v0.1.md) owns operation vocabulary and semantic boundaries.
-- [`tier-1-api.md`](tier-1-api.md) owns the public Tier 1 API contract.
-- [`object-vs-operation.md`](object-vs-operation.md) owns the Core-versus-integration boundary.
-- [`reference-prototype-findings.md`](reference-prototype-findings.md) preserves empirical prototype findings.
-
-Phase 10.4 refines the reviewer-facing meaning of diagnostic evidence without changing those contracts or implementing runtime integrations.
+- [`domain-model.md`](domain-model.md) — event structure and core domain concepts.
+- [`../framework/core-operations-v0.1.md`](../framework/core-operations-v0.1.md) — operation vocabulary and semantic boundaries.
+- [`tier-1-api.md`](tier-1-api.md) — public Tier 1 API contract.
+- [`object-vs-operation.md`](object-vs-operation.md) — Core-versus-integration boundary.
+- [`provenance.md`](provenance.md) — program-level execution and artifact provenance.
+- [`reference-prototype-findings.md`](reference-prototype-findings.md) — empirical prototype findings.
