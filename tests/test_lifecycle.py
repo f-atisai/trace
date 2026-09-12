@@ -34,6 +34,36 @@ def test_failed_run_emits_failed_end_and_reraises(capsys):
     assert output[1].endswith(" – ValueError")
 
 
+def test_failed_run_preserves_original_exception_object():
+    trace = Trace("T14_01")
+    original = ValueError("original failure")
+
+    with pytest.raises(ValueError) as caught:
+        with trace:
+            raise original
+
+    assert caught.value is original
+
+
+def test_lifecycle_logging_failure_does_not_mask_program_exception(monkeypatch):
+    trace = Trace("T14_01")
+    original = ValueError("program failure")
+    original_record = trace._record
+
+    def fail_only_for_end(*, operation, **kwargs):
+        if getattr(operation, "value", operation) == "END":
+            raise RuntimeError("instrumentation failure")
+        return original_record(operation=operation, **kwargs)
+
+    monkeypatch.setattr(trace, "_record", fail_only_for_end)
+
+    with pytest.raises(ValueError) as caught:
+        with trace:
+            raise original
+
+    assert caught.value is original
+
+
 def test_nested_reentry_is_rejected():
     trace = Trace("T14_01")
 
