@@ -1,7 +1,7 @@
 # TRACE Reviewer Experience
 
 **Phase:** 10 — Define the TRACE Reviewer Experience  
-**Status:** Active design charter  
+**Status:** Active design specification  
 **Scope:** Reviewer model, execution evidence, provenance, and Phase 10 validation goals
 
 ## 1. Purpose
@@ -50,16 +50,26 @@ semantic events
       +
 observed diagnostics
       +
-execution provenance
+program-level provenance
       =
 reviewable execution evidence
 ```
+
+These forms of evidence are related but serve different purposes.
+
+| Evidence | Answers | Typical examples |
+|---|---|---|
+| Semantic event | What analytical activity occurred? | `READ`, `FILTER`, `MERGE`, `ANALYZE`, `OUTPUT` |
+| Diagnostic | What measurable evidence describes that activity? | row counts, duplicates, result dimensions |
+| Program-level provenance | Which execution and artifacts does this log belong to? | program, run ID, timestamp, input/output artifacts |
 
 ### 3.1 Semantic events
 
 Semantic events describe **what kind of statistical-programming activity occurred**.
 
 TRACE uses the canonical vocabulary defined in [`../framework/core-operations-v0.1.md`](../framework/core-operations-v0.1.md). Phase 10 tests that vocabulary from the reviewer's perspective; it does not redefine operation semantics.
+
+Semantic events should remain concise and focused on analytical execution. Provenance metadata must not be repeated on each event merely because it applies to the same run.
 
 ### 3.2 Observed diagnostics
 
@@ -74,30 +84,60 @@ result_rows=814
 duplicates=17
 ```
 
-Phase 10 must preserve the distinction between diagnostics TRACE actually observes and values merely asserted by the programmer. That distinction affects how much evidentiary weight a reviewer should place on the log.
+Diagnostics belong to the operation they describe. They are not provenance.
+
+Phase 10 must preserve the distinction between diagnostics TRACE actually observes and values merely supplied by the programmer. That distinction affects how much evidentiary weight a reviewer should place on the log.
 
 The Core-versus-integration architecture for collecting runtime evidence is defined in [`object-vs-operation.md`](object-vs-operation.md).
 
-### 3.3 Execution provenance
+### 3.3 Program-level provenance
 
-Initial Phase 10 provenance is deliberately narrow:
+Execution provenance is recorded once at program level rather than repeated across semantic events.
+
+Initial Phase 10 provenance consists of:
 
 ```text
-execution timestamp
-input artifacts
-output artifacts
-artifact hashes, where useful and safe
+program
+run_id
+executed_at
+input_artifacts
+output_artifacts
+optional artifact hashes
 ```
 
-Existing execution identity such as `program` and `run_id` remains relevant.
+Its purpose is to answer:
+
+> Which execution and physical artifacts does this TRACE log belong to?
+
+A reviewer-facing provenance block may look like:
+
+```text
+TRACE EXECUTION
+
+Program:  T14_01
+Run ID:   7eab...
+Executed: 2026-09-12T10:42:18Z
+
+Input artifacts:
+  data/adam/adsl.parquet
+  sha256: 8f31...
+
+Output artifacts:
+  outputs/tlf_population.rtf
+  sha256: a791...
+```
+
+Hashes are optional artifact identifiers. When used, they should identify the physical input or output artifact and must not be repeated as READ/OUTPUT event metrics.
 
 Broader environment fingerprinting—Git state, Python/package versions, operating system, hostname, or user identity—remains out of scope until a concrete review or reproducibility need justifies it.
+
+The exact API and storage model for provenance are deferred to the provenance design sprint. Phase 10.2 defines its meaning and review role only.
 
 ## 4. What reviewers should look for
 
 A reviewer should be able to use TRACE to investigate:
 
-- whether the expected input artifacts were read;
+- whether the expected input artifacts belong to the execution;
 - whether row, subject, or result dimensions changed plausibly;
 - unexpected attrition after filters;
 - unexpected expansion or contraction after merges;
@@ -105,21 +145,28 @@ A reviewer should be able to use TRACE to investigate:
 - whether the intended analysis method was executed for the expected analysis or population;
 - diagnostics from checks and validations, including failures that did not stop execution;
 - whether the expected outputs were produced; and
-- whether the reviewed input/output artifacts belong to the recorded execution.
+- whether the reviewed input/output artifacts belong to the recorded run.
 
 Not every event deserves equal attention. TRACE should make the analytical journey easy to reconstruct and make unusual evidence easy to spot.
 
 Example:
 
 ```text
+TRACE EXECUTION
+Program: T14_01
+Run ID:  7eab...
+Executed: 2026-09-12T10:42:18Z
+Inputs:  data/adam/adsl.parquet
+Outputs: outputs/t14_01.rtf
+
 INFO [READ]     [ADSL] rows=254
-INFO [FILTER]   [Safety Population] rows=254 → 249
-INFO [MERGE]    [Safety AEs] left_rows=249 right_rows=731 result_rows=814
+INFO [FILTER]   [ADSL] SAFFL == 'Y' applied – N=254 → 249
+INFO [MERGE]    [ADSL + ADAE] left_rows=249 right_rows=731 result_rows=814
 WARN [VALIDATE] [USUBJID uniqueness] FAIL duplicates=17
-INFO [OUTPUT]   [AE Summary] t14-2-01.rtf
+INFO [OUTPUT]   [T14_01] written – outputs/t14_01.rtf
 ```
 
-The reviewer can immediately see a population reduction, later merge expansion, a failed uniqueness expectation, continued execution, and production of an output. TRACE should make that story visible without forcing the reviewer to search a long runtime log for isolated messages.
+The provenance block identifies the run and artifacts once. The semantic events then remain focused on what happened analytically and the diagnostics associated with those operations.
 
 ## 5. Quarto and conventional Python
 
@@ -167,7 +214,7 @@ TRACE must also preserve these distinctions:
 what the programmer intended
 what the program did
 what TRACE observed
-what the programmer asserted
+what the programmer supplied
 what the reviewer concluded
 ```
 
@@ -186,7 +233,7 @@ Phase 10 should validate whether TRACE allows a reviewer to answer:
 7. Can the reviewer reconcile the TRACE evidence with the source or Quarto document and the resulting output?
 8. Does TRACE expose this evidence without implying that execution evidence proves statistical correctness?
 
-Phase 10 includes realistic statistical-programming examples, observed-diagnostic semantics, minimal provenance, reviewer-oriented log examples, and a second API-friction review.
+Phase 10 includes realistic statistical-programming examples, observed-diagnostic semantics, minimal program-level provenance, reviewer-oriented log examples, and a second API-friction review.
 
 It does not introduce new operations merely to make examples more descriptive, redesign the event model without evidence, require runtime DataFrames in Core, infer Python variable names, capture subject-level clinical data by default, or expand provenance without a demonstrated requirement.
 
