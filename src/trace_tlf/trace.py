@@ -116,7 +116,7 @@ class Trace:
                 severity=Severity.ERROR,
             )
         except Exception:
-            # Never replace the program's original exception with instrumentation failure.
+            # Never mask the program's original exception with TRACE failure.
             pass
         return False
 
@@ -755,7 +755,7 @@ class _StepScope:
                         severity=Severity.ERROR,
                     )
                 except Exception:
-                    # Never replace the program's original exception with instrumentation.
+                    # Never mask the program's original exception with TRACE failure.
                     pass
         finally:
             popped = self._trace._step_stack.pop()
