@@ -36,7 +36,9 @@ def test_trace_writes_optional_file(tmp_path):
     log_file = tmp_path / "logs" / "T14_01.log"
     trace = Trace("T14_01", log_file=log_file)
     trace.log("CHECK", object="ADSL", action="prototype event")
-    assert log_file.read_text(encoding="utf-8").strip() == "INFO [CHECK] [ADSL] prototype event"
+    assert log_file.read_text(encoding="utf-8").strip() == (
+        "INFO [CHECK] [ADSL] prototype event"
+    )
 
 
 def test_trace_uses_info_threshold_by_default():
