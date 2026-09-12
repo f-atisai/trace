@@ -89,6 +89,36 @@ def test_step_failure_emits_failed_and_reraises(capsys):
     assert output[1].endswith(" – ValueError")
 
 
+def test_step_failure_preserves_original_exception_object():
+    trace = Trace("T14_01")
+    original = ValueError("original failure")
+
+    with pytest.raises(ValueError) as caught:
+        with trace.step("Analysis population"):
+            raise original
+
+    assert caught.value is original
+
+
+def test_step_logging_failure_does_not_mask_program_exception(monkeypatch):
+    trace = Trace("T14_01")
+    original = ValueError("program failure")
+    original_record = trace._record
+
+    def fail_only_for_failed_step(*, operation, action, **kwargs):
+        if getattr(operation, "value", operation) == "STEP" and action == "failed":
+            raise RuntimeError("instrumentation failure")
+        return original_record(operation=operation, action=action, **kwargs)
+
+    monkeypatch.setattr(trace, "_record", fail_only_for_failed_step)
+
+    with pytest.raises(ValueError) as caught:
+        with trace.step("Analysis population"):
+            raise original
+
+    assert caught.value is original
+
+
 def test_step_failure_inside_program_emits_step_then_end_failure(capsys):
     trace = Trace("T14_01")
 
