@@ -1,15 +1,11 @@
-from .context import TraceContext
-from .event import TraceEvent
-from .operations import Operation
-from .severity import Severity
-from .status import Status
+"""Public package surface for TRACE for Python.
+
+The v0.1.0-alpha supported top-level API intentionally exposes only
+:class:`Trace`. Domain-model classes and renderer internals remain available
+inside their implementation modules for TRACE development, but they are not
+part of the alpha compatibility contract.
+"""
+
 from .trace import Trace
 
-__all__ = [
-    "Trace",
-    "Operation",
-    "Severity",
-    "Status",
-    "TraceContext",
-    "TraceEvent",
-]
+__all__ = ["Trace"]
