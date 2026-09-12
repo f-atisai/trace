@@ -4,26 +4,28 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trace-tlf"
-version = "0.1.0"
-description = "Lightweight execution logging for Python statistical programming."
-readme = "README.md"
+version = "0.1.0a1"
+description = "Semantic execution evidence for Python statistical programming."
+readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
 license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "TRACE contributors" },
 ]
 keywords = [
     "clinical-programming",
     "statistical-programming",
-    "logging",
+    "execution-evidence",
     "clinical-trials",
     "traceability",
     "auditability",
 ]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -42,12 +44,15 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/f-atisai/trace"
+Documentation = "https://github.com/f-atisai/trace/tree/main/docs"
 Repository = "https://github.com/f-atisai/trace"
 Issues = "https://github.com/f-atisai/trace/issues"
 Changelog = "https://github.com/f-atisai/trace/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["trace_tlf*"]
+namespaces = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
