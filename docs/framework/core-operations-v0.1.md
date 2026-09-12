@@ -7,32 +7,7 @@
 
 ## 1. Purpose
 
-TRACE deliberately imposes a controlled execution vocabulary for statistical programming.
-
-The purpose is consistency.
-
-A statistical program should not describe equivalent operations using competing terms such as:
-
-```text
-SUBSET
-FILTER
-WHERE
-SELECT
-```
-
-or:
-
-```text
-JOIN
-MERGE
-COMBINE
-```
-
-unless those words represent genuinely different semantics.
-
-TRACE therefore classifies meaningful execution events using a small canonical vocabulary.
-
-The Phase 1 core vocabulary is:
+TRACE uses a controlled vocabulary to describe meaningful statistical-programming execution consistently across Python backends.
 
 ```text
 READ
@@ -48,713 +23,343 @@ VALIDATE
 OUTPUT
 ```
 
-Lifecycle operations:
+`START` and `END` are reserved TRACE-managed lifecycle operations. `SUMMARY` is excluded because it overlaps with both `AGGREGATE` and `ANALYZE`.
 
-```text
-START
-END
-```
+## 2. Selection principles
 
-are reserved for TRACE-managed program and step lifecycle events.
+TRACE classifies statistical intent, not Python syntax. Equivalent pandas, Polars, SQL, NumPy, or custom implementations should map to the same operation.
 
-`SUMMARY` is not part of TRACE Core Operations v0.1 because its meaning overlaps too heavily with `AGGREGATE` and `ANALYZE`.
-
----
-
-## 2. Vocabulary Design Principles
-
-### 2.1 Represent intent, not syntax
-
-TRACE classifies statistical-programming meaning rather than the Python method used.
-
-For example:
-
-```python
-adsl.query("SAFFL == 'Y'")
-adsl.loc[adsl["SAFFL"] == "Y"]
-```
-
-both represent:
-
-```text
-FILTER
-```
-
-### 2.2 One primary term per concept
-
-TRACE should prefer one term and reject unnecessary synonyms.
-
-Examples:
+Use one primary term per concept:
 
 ```text
 FILTER    not SUBSET / WHERE / SELECT
-MERGE     not JOIN / COMBINE
-AGGREGATE not SUMMARY / GROUP-SUMMARIZE
+MERGE     not JOIN / COMBINE / CONCAT
+AGGREGATE not SUMMARY
 OUTPUT    not WRITE / EXPORT / SAVE
 ```
 
-Alternative wording may appear naturally in an event's `action`, but not as competing operation names.
+Not every line of code deserves a TRACE event. Record operations that materially explain inputs, population changes, derivations, data structure, statistical analysis, validation, outputs, or execution flow.
 
-### 2.3 Operations describe meaningful execution events
+### Semantic identities
 
-Not every line of Python deserves a TRACE event.
+TRACE names stable statistical-programming concepts rather than Python variables. Prefer `ADSL`, `ADAE`, `AGEGR1`, `Overall survival`, `TEAE_SAFETY`, and `T14_01` over `df`, `tmp`, or `merged_df`.
 
-TRACE operations should represent steps that materially explain data provenance, population changes, variable creation, dataset structure, analytical processing, validation, generated outputs, or execution lifecycle.
+When an operation acts on one object and produces a separately meaningful analytical concept, preserve both identities rather than replacing the source identity casually.
 
-### 2.4 Operations are backend-independent
+For example, selecting the Safety Population from ADSL is still a `FILTER` on `ADSL`; `Safety Population` is the resulting analytical concept:
 
-An operation must remain meaningful across pandas, Polars, PyArrow, SQL, DuckDB, NumPy, and custom Python.
+```text
+source/object: ADSL
+condition:     SAFFL == 'Y'
+result:        Safety Population
+```
 
-### 2.5 Operations are semantically stable
+This rule prevents logs from losing physical dataset identity while still allowing reviewer-facing analytical concepts to be represented. Existing operation-specific result fields should be used where available; otherwise the result identity may remain structured metadata until repeated use justifies a dedicated API parameter.
 
-Once an operation becomes part of the stable TRACE vocabulary, its meaning must not drift casually. Structured downstream consumers may depend on it.
+`ANALYZE` is intentionally different: the analysis or endpoint is the semantic subject of the event, while the source dataset is recorded separately.
 
-### 2.6 Object identities are semantic
-
-TRACE object identities should remain meaningful when implementation details change. Prefer stable domain identities such as `ADSL`, `ADAE`, `TEAE_SAFETY`, `demographics_summary`, `Overall survival`, and `T14_01` over implementation-only names such as `df`, `df2`, `tmp`, or `merged_df`.
-
-A semantic identity may happen to match a Python variable, but TRACE must not introspect variable names and treat them as authoritative.
-
----
-
-## 3. Core Operations
+## 3. Core operations
 
 ### 3.1 READ
 
-**Definition:** `READ` records the acquisition or loading of an input object into the current statistical-program execution.
+**Means:** Acquire an external input for the current execution.
 
-**Intent:** Use `READ` when data, metadata, configuration, or another externally persisted analytical object becomes available to the program.
-
-Typical objects include `ADSL`, `ADAE`, `DM`, metadata workbooks, shell specifications, and configuration files.
-
-Example:
-
-```json
-{
-  "operation": "READ",
-  "object": "ADSL",
-  "action": "loaded",
-  "metrics": {
-    "rows": 754,
-    "columns": 16
-  }
-}
-```
-
-Possible rendering:
+**Typical examples:** read `ADSL`, `ADAE`, `ADTTE`, a metadata workbook, shell specification, or configuration file.
 
 ```text
 INFO [READ] [ADSL] loaded – N=754, Vars=16
 ```
 
-**Includes:** reading datasets, loading files, importing persisted metadata, obtaining input tables from supported data sources.
+**Does not mean:** create an in-memory result, derive a dataset, or write an output.
 
-**Does not include:** creating a derived dataset in memory, generating output, or merely referencing an already-loaded object.
-
-**Avoid as operation synonyms:** `LOAD`, `IMPORT`, `INGEST`, `OPEN`.
-
----
+**Common confusion:** use `READ`, not `LOAD`, `IMPORT`, or `INGEST`.
 
 ### 3.2 CHECK
 
-**Definition:** `CHECK` records an observational or diagnostic inspection whose primary purpose is to understand execution state rather than assert a required outcome.
-
-**Intent:** Use `CHECK` when the program examines something and records what it found, but a pass/fail contract is not being enforced.
-
-Examples:
+**Means:** Observe or inspect execution state without enforcing an expected outcome.
 
 ```text
 INFO [CHECK] [ADSL] treatment groups inspected – groups=3
-INFO [CHECK] [ADAE] missing AEDECOD reviewed – N=12
+INFO [CHECK] [ADLBC] glucose visits inspected – visits=6
 ```
 
-**Typical uses:** diagnostic counts, exploratory checks, informational existence checks, temporary QC instrumentation, runtime inspection.
+Typical uses include diagnostic counts, data availability inspection, missingness observation, and temporary QC diagnostics.
 
-**CHECK versus VALIDATE:**
+**Does not mean:** test a required rule.
 
-`CHECK` asks:
-
-> What do we observe?
-
-`VALIDATE` asks:
-
-> Did the data or result satisfy an expected rule?
-
-If an operation has a defined expected outcome such as uniqueness, completeness, expected treatment groups, or acceptable tolerance, prefer `VALIDATE`.
-
-**Avoid as operation synonyms:** `INSPECT`, `REVIEW`, `VERIFY`, `TEST`.
-
----
+**Common confusion:** `CHECK` asks *what do we observe?*; `VALIDATE` asks *did an expectation hold?*
 
 ### 3.3 FILTER
 
-**Definition:** `FILTER` records a row- or observation-selection operation that changes or defines an analysis population or subset.
-
-**Intent:** Use `FILTER` whenever observations are retained or excluded according to a condition.
-
-Example:
+**Means:** Retain or exclude observations according to a condition, including selection of an analysis population or analysis subset.
 
 ```text
 INFO [FILTER] [ADSL] SAFFL == 'Y' applied – N=754 → 720
+INFO [FILTER] [ADAE] TRTEMFL == 'Y' applied – N=4127 → 2964
 ```
 
-Structured concept:
+Typical uses include Safety/ITT/FAS/PP selection, treatment-emergent AE selection, parameter filtering, visit windows, and analysis windows.
 
-```json
-{
-  "operation": "FILTER",
-  "object": "ADSL",
-  "action": "SAFFL == 'Y' applied",
-  "metrics": {
-    "before": 754,
-    "after": 720,
-    "removed": 34
-  }
-}
+For a named population, keep the source dataset identity and record the resulting concept separately:
+
+```text
+ADSL + SAFFL == 'Y' → Safety Population
+ADSL + ITTFL == 'Y' → ITT Population
 ```
 
-Typical clinical uses include safety/FAS/ITT/PP population selection, treatment-emergent AE filtering, visit-window filtering, randomized-subject selection, and analysis-window filtering.
+**Does not mean:** select columns, order rows, group observations, or reshape data.
 
-**Does not include:** selecting columns, sorting, grouping without row removal, or generic structural transformations.
-
-**Canonical synonym policy:** `SUBSET`, `WHERE`, `SELECT`, and `SCREEN` are not separate TRACE operations.
-
----
+**Common confusion:** creating a named population does not require a `POPULATION` operation; it remains `FILTER`.
 
 ### 3.4 SORT
 
-**Definition:** `SORT` records an intentional ordering of observations according to one or more keys.
-
-**Intent:** Use `SORT` when observation order matters to subsequent statistical processing, reporting, derivation, or reproducibility.
-
-Examples:
+**Means:** Intentionally order observations by one or more keys where order matters to subsequent processing, derivation, reporting, or reproducibility.
 
 ```text
 INFO [SORT] [ADAE] ordered – by=USUBJID,AESTDTC
-INFO [SORT] [ADSL] ordered – by=TRT01AN,USUBJID
+INFO [SORT] [ADLBC] ordered – by=USUBJID,AVISITN
 ```
 
-Typical clinical uses include chronological AE processing, by-subject derivations, deterministic listing order, treatment-group table preparation, and lag/lead logic.
+Typical uses include chronological AE processing, LOCF preparation, lag/lead logic, and deterministic listing order.
 
-**Does not include:** statistical ranking, grouping, or purely cosmetic display ordering with no execution significance.
+**Does not mean:** statistical ranking, grouping, or cosmetic ordering with no execution significance.
 
-**Avoid as operation synonyms:** `ORDER`, `ORDER_BY`, `ARRANGE`.
-
----
+**Common confusion:** `SORT` changes order; `TRANSFORM` changes representation or structure.
 
 ### 3.5 DERIVE
 
-**Definition:** `DERIVE` records creation of a named analytical concept from existing information, including an analysis variable, parameter, flag, category, endpoint-derived value, or other domain concept that did not previously exist.
-
-**Intent:** Use `DERIVE` when the key semantic event is creation of a new analytical concept.
-
-Examples:
+**Means:** Create a named analytical concept that did not previously exist, such as a variable, flag, category, parameter, endpoint-derived value, or analysis value.
 
 ```text
 INFO [DERIVE] [AGEGR1] created – dataset=ADSL, source=AGE
 INFO [DERIVE] [TRTEMFL] created – dataset=ADAE
-INFO [DERIVE] [AVAL] created – parameter=CHG
+INFO [DERIVE] [CHG] created – dataset=ADLBC, source=AVAL,BASE
 ```
 
-Typical clinical uses include analysis flags, age groups, baseline flags, treatment-emergent flags, change-from-baseline values, analysis dates/days, and parameter derivations.
+Typical uses include analysis flags, age groups, baseline flags, treatment-emergent flags, change from baseline, analysis day, and parameter derivations.
 
-**DERIVE versus TRANSFORM:**
+**Does not mean:** merely change representation or layout.
 
-Use `DERIVE` when a new analytical concept is created.
-
-Use `TRANSFORM` when representation or structure changes without creating a new analytical concept.
-
-```text
-AGE → AGEGR1                              DERIVE
-AESTDTC text → parsed date representation TRANSFORM
-```
-
-The distinction follows statistical intent, not merely whether a new physical Python column is assigned. A new named analysis variable should normally be `DERIVE` even when its implementation uses recoding, mapping, concatenation, or formatting.
-
-**Avoid as operation synonyms:** `CALCULATE`, `COMPUTE`, `CREATE`, `GENERATE`.
-
----
+**Common confusion:** a new named analysis variable is normally `DERIVE` even when implemented by recoding, mapping, concatenation, or formatting. Use `TRANSFORM` when no new analytical concept is created.
 
 ### 3.6 TRANSFORM
 
-**Definition:** `TRANSFORM` records a material change in representation, structure, normalization, reshaping, or preparation of an existing analytical object when no new analytical concept is created and no more specific TRACE operation better expresses the intent.
-
-**Intent:** `TRANSFORM` is the controlled general-purpose transformation operation. It should not become a catch-all.
-
-Examples:
+**Means:** Materially change representation, structure, normalization, reshaping, or reporting preparation when no more specific TRACE operation expresses the intent.
 
 ```text
 INFO [TRANSFORM] [AESTDTC] parsed to analysis date
-INFO [TRANSFORM] [LB] reshaped – long to wide
-INFO [TRANSFORM] [subject_listing] selected and ordered display columns
+INFO [TRANSFORM] [disposition_summary] pivoted to treatment columns
+INFO [TRANSFORM] [subject_listing] prepared display columns
 ```
 
-Typical uses include parsing date/time values, representation-only recoding, reshaping, normalization, display preparation, and analytically meaningful type conversion. A join remains `MERGE`, and creation of a named analysis variable remains `DERIVE`, even if either could be described informally as a transformation.
+Typical uses include date parsing, long-to-wide reshaping, pivoting, representation-only recoding, display preparation, and analytically meaningful type conversion.
 
-Use a more specific operation when possible:
+**Does not mean:** join datasets, create a new analytical variable, filter rows, or perform a statistical model.
 
-```text
-row selection        → FILTER
-ordering             → SORT
-new analytical value → DERIVE
-combining datasets   → MERGE
-group summarization  → AGGREGATE
-statistical method   → ANALYZE
-```
-
-**Avoid as top-level synonyms:** `MODIFY`, `CONVERT`, `RESHAPE`, `RECODE`, `NORMALIZE`.
-
----
+**Common confusion:** `TRANSFORM` is a controlled fallback, not a catch-all. Prefer `FILTER`, `SORT`, `DERIVE`, `MERGE`, `AGGREGATE`, or `ANALYZE` when one fits.
 
 ### 3.7 MERGE
 
-**Definition:** `MERGE` records combination of two or more analytical objects where provenance of the contributing sources matters.
-
-**Intent:** Use `MERGE` when multiple input datasets or table-like objects are combined into one analytical result.
-
-Example:
+**Means:** Combine two or more analytical objects when the contributing sources matter.
 
 ```text
-INFO [MERGE] [ADAE + ADSL] merged – on=USUBJID, how=left
+INFO [MERGE] [ADAE + ADSL] merged – on=USUBJID, how=inner
+INFO [MERGE] [AE counts + denominators] merged – on=TRT01A
 ```
 
-Structured concept:
+Typical uses include adding subject-level attributes to BDS/OCCDS data, joining denominators to summaries, and combining independently prepared analytical components.
 
-```json
-{
-  "operation": "MERGE",
-  "object": "ADAE + ADSL",
-  "action": "merged",
-  "details": {
-    "on": ["USUBJID"],
-    "how": "left",
-    "result": "ADAE_ANALYSIS"
-  },
-  "metrics": {
-    "left_rows": 4127,
-    "right_rows": 754,
-    "result_rows": 4127
-  }
-}
-```
+Row concatenation may also use `MERGE` in v0.1 with a structured mode such as `concat_rows`.
 
-Typical clinical uses include adding ADSL treatment information to BDS/OCCDS data, subject-level enrichment, bringing denominators into event data, and combining independently prepared analytical components.
+**Does not mean:** group/reduce one dataset or derive a variable.
 
-**JOIN versus MERGE:** TRACE v0.1 uses `MERGE` as the umbrella term. Join type belongs in structured details such as `how="left"`.
-
-For v0.1, row concatenation may also be represented as `MERGE` with a structured mode such as `concat_rows`. If real use shows materially different semantics, a future dedicated operation can be proposed deliberately.
-
-**Avoid as operation synonyms:** `JOIN`, `COMBINE`, `APPEND`, `CONCAT`, `LINK`.
-
----
+**Common confusion:** TRACE uses `MERGE` as the umbrella term for `JOIN`, `COMBINE`, `APPEND`, and `CONCAT` in v0.1.
 
 ### 3.8 AGGREGATE
 
-**Definition:** `AGGREGATE` records reduction or grouping of detailed observations into summary-level values.
-
-**Intent:** Use `AGGREGATE` when rows are summarized by groups or across an analysis population using counts, sums, descriptive statistics, or similar reductions.
-
-Examples:
+**Means:** Reduce or group detailed observations into summary-level values using counts, percentages, sums, descriptive statistics, or similar reductions.
 
 ```text
-INFO [AGGREGATE] [ADSL] summarized – by=TRT01A,SEX
-INFO [AGGREGATE] [ADAE] incidence counts created – by=TRT01A,AEDECOD
+INFO [AGGREGATE] [ADSL] participant counts created – by=TRT01A
+INFO [AGGREGATE] [ADAE] subject incidence created – by=TRT01A,AEBODSYS,AEDECOD
+INFO [AGGREGATE] [ADLBC] descriptive statistics created – by=TRTP,AVISIT
 ```
 
-Typical uses include counts and percentages, treatment-group summaries, descriptive statistics, subject counts by category, AE incidence tabulation, and visit-level summary preparation.
+Typical uses include demographics summaries, disposition counts, AE incidence, laboratory/vital-sign descriptive statistics, exposure summaries, and population denominators.
 
-**AGGREGATE versus ANALYZE:**
+**Does not mean:** fit a model or estimator whose statistical method is the primary semantic event.
 
-Use `AGGREGATE` when the primary operation is grouping/reduction.
-
-Use `ANALYZE` when applying a statistical analytical procedure, model, or estimator.
-
-```text
-count subjects by treatment       → AGGREGATE
-mean and SD by treatment          → AGGREGATE
-Kaplan-Meier estimation           → ANALYZE
-Cox proportional hazards model    → ANALYZE
-ANCOVA                             → ANALYZE
-```
-
-**Why not SUMMARY:** `SUMMARY` is ambiguous between data aggregation, statistical analysis, execution summary, and report output. `AGGREGATE` is more precise.
-
----
+**Common confusion:** counts, means, SDs, and percentages are `AGGREGATE`; ANCOVA, MMRM, Kaplan–Meier, and Cox regression are `ANALYZE`.
 
 ### 3.9 ANALYZE
 
-**Definition:** `ANALYZE` records application of a statistical analytical method, estimator, model, inferential procedure, or analysis algorithm whose primary purpose extends beyond simple grouping and reduction.
+**Means:** Apply a statistical analytical method, model, estimator, inferential procedure, or analysis algorithm beyond simple grouping/reduction.
 
-**Intent:** Use `ANALYZE` for statistical methodology.
-
-An analysis event distinguishes the analytical input from the analysis, endpoint, or estimand identity. For example, Kaplan–Meier estimation may use `ADTTE` as its source and `Overall survival` as its analysis identity; a separately named result such as `km_curve` is the produced analytical object.
-
-Examples:
+The source dataset and the analysis identity remain distinct:
 
 ```text
-INFO [ANALYZE] [OS] Kaplan-Meier estimate computed – population=ITT
-INFO [ANALYZE] [AVAL] ANCOVA fitted – parameter=CHANGE
-INFO [ANALYZE] [ORR] exact confidence interval computed
+source:   ADTTE
+analysis: Overall survival
+method:   Kaplan-Meier
 ```
 
-Typical uses include Kaplan-Meier estimation, Cox regression, logistic regression, ANCOVA, MMRM, hypothesis tests, confidence intervals, statistical estimators, and clinically meaningful analysis algorithms.
+Realistic examples:
 
-**Does not include:** simple counts/group summaries (`AGGREGATE`), variable creation (`DERIVE`), result checking (`VALIDATE`), or artifact generation (`OUTPUT`).
+```text
+INFO [ANALYZE] [Overall survival] Kaplan-Meier fitted – source=ADTTE, population=ITT
+INFO [ANALYZE] [Overall survival] Cox model fitted – source=ADTTE, population=ITT
+INFO [ANALYZE] [Week 24 glucose change] ANCOVA fitted – source=ADLBC, population=Efficacy
+INFO [ANALYZE] [Change from baseline] MMRM fitted – source=ADVS, population=ITT
+```
 
----
+Typical uses include Kaplan–Meier estimation, Cox regression, logistic regression, ANCOVA, MMRM, hypothesis tests, confidence intervals, and other defined statistical estimators.
+
+**Does not mean:** descriptive grouping, variable derivation, validation, or output generation.
+
+**Common confusion:** if the primary act is grouped summarization, use `AGGREGATE`; if a statistical method/model/estimator is applied, use `ANALYZE`.
 
 ### 3.10 VALIDATE
 
-**Definition:** `VALIDATE` records evaluation of an explicit expectation, rule, requirement, tolerance, or acceptance criterion.
-
-**Intent:** Use `VALIDATE` when an outcome can meaningfully be expressed as success/failure or equivalent.
-
-Examples:
+**Means:** Evaluate an explicit expectation, requirement, rule, tolerance, or acceptance criterion.
 
 ```text
 INFO [VALIDATE] [ADSL] USUBJID uniqueness – PASS
 WARNING [VALIDATE] [T14_01] expected treatment groups present – FAIL
-INFO [VALIDATE] [QC] production and QC results agree – PASS
+INFO [VALIDATE] [QC comparison] production and QC results agree – PASS
 ```
 
-Typical clinical uses include uniqueness, required-value checks, expected population counts, expected treatment arms, shell conformity, production/QC comparison, tolerance checks, output presence, and cross-dataset consistency.
+Typical uses include uniqueness, required values, expected treatment arms, shell conformity, tolerance checks, cross-dataset consistency, and independent production/QC comparisons.
 
-**VALIDATE versus CHECK:**
+**Does not mean:** merely inspect data.
 
-```text
-Inspect number of treatment groups       → CHECK
-Require exactly three treatment groups   → VALIDATE
-```
-
-**Avoid as operation synonyms:** `VERIFY`, `ASSERT`, `TEST`, `QC`.
-
-`QC` is a workflow/context, not one operation type.
-
----
+**Common confusion:** `CHECK` observes; `VALIDATE` evaluates an expectation. `QC` is a workflow/context, not an operation.
 
 ### 3.11 OUTPUT
 
-**Definition:** `OUTPUT` records successful or attempted production of an externally consumable artifact.
-
-**Intent:** Use `OUTPUT` when TRACE needs to record what the program produced.
-
-Typical objects include tables, listings, figures, datasets, RTF/PDF/Excel/CSV/JSON files, QC reports, and execution manifests.
-
-Example:
+**Means:** Produce an externally consumable artifact.
 
 ```text
 INFO [OUTPUT] [T14_01] written – outputs/T14_01.rtf
+INFO [OUTPUT] [ADAE] written – adam/adae.xpt
 ```
 
-Structured concept:
+Typical outputs include tables, listings, figures, derived datasets, RTF/PDF/Excel/CSV/JSON files, QC reports, and execution manifests.
 
-```json
-{
-  "operation": "OUTPUT",
-  "object": "T14_01",
-  "action": "written",
-  "details": {
-    "path": "outputs/T14_01.rtf",
-    "format": "RTF",
-    "type": "TABLE"
-  }
-}
+**Does not mean:** create a temporary in-memory object or emit a debug-only print statement.
+
+**Common confusion:** use `OUTPUT`, not `WRITE`, `EXPORT`, `SAVE`, or `PUBLISH` as a top-level operation.
+
+## 4. Boundary rules
+
+The most important semantic boundaries are:
+
+```text
+CHECK      observe
+VALIDATE   test an expectation
+
+DERIVE     create a named analytical concept
+TRANSFORM  change representation or structure
+
+AGGREGATE  group, reduce, or summarize
+ANALYZE    apply a statistical method, model, or estimator
 ```
-
-**Includes:** externally meaningful tables, listings, figures, derived datasets, manifests, and downstream files.
-
-**Does not include:** temporary in-memory objects, incidental cache files, or debug-only `print()` statements.
-
-**Avoid as operation synonyms:** `WRITE`, `EXPORT`, `SAVE`, `EMIT`, `PUBLISH`.
-
----
-
-## 4. Lifecycle Operations
-
-Lifecycle operations belong to the TRACE system vocabulary but are not ordinary statistical-programmer domain actions.
-
-### 4.1 START
-
-**Definition:** `START` records the beginning of a bounded execution scope.
 
 Examples:
 
 ```text
-INFO [START] [T14_01] execution started
-INFO [START] [Analysis population] step started
+Inspect treatment-group count                 CHECK
+Require exactly three treatment groups        VALIDATE
+
+AGE → AGEGR1                                  DERIVE
+Pivot disposition rows to treatment columns   TRANSFORM
+
+Count subjects by treatment                   AGGREGATE
+Mean and SD by treatment                      AGGREGATE
+Kaplan-Meier estimation                       ANALYZE
+ANCOVA                                        ANALYZE
 ```
 
-Potential scopes include program, step, analysis, and output generation.
+## 5. Phase 10 statistical pressure test
 
-`START` should normally be generated by TRACE lifecycle mechanisms rather than manually emitted throughout user code.
+The v0.1 vocabulary was pressure-tested against realistic clinical-programming workflows, including Python submission examples containing population summaries, disposition tables, AE summaries, LOCF preparation, descriptive statistics, ANCOVA, and RTF output.
 
-### 4.2 END
+No additional operation is required.
 
-**Definition:** `END` records the termination of a bounded execution scope.
+| Scenario | Typical TRACE sequence |
+|---|---|
+| Analysis population | `READ → FILTER → CHECK/VALIDATE` |
+| Demographics | `READ → FILTER → DERIVE → AGGREGATE → TRANSFORM → OUTPUT` |
+| Disposition | `READ → FILTER → AGGREGATE → MERGE → TRANSFORM → OUTPUT` |
+| Adverse events | `READ → FILTER → MERGE → AGGREGATE → TRANSFORM → OUTPUT` |
+| Laboratory summaries | `READ → FILTER → DERIVE → AGGREGATE → TRANSFORM → OUTPUT` |
+| Vital-sign summaries | `READ → FILTER → DERIVE → AGGREGATE → TRANSFORM → OUTPUT` |
+| Exposure | `READ → FILTER → DERIVE → AGGREGATE → OUTPUT` |
+| Kaplan–Meier | `READ → FILTER → SORT → ANALYZE → VALIDATE → OUTPUT` |
+| Cox regression | `READ → FILTER → ANALYZE → VALIDATE → OUTPUT` |
+| MMRM | `READ → FILTER → DERIVE → ANALYZE → VALIDATE → OUTPUT` |
+| ANCOVA | `READ → FILTER → MERGE → SORT → DERIVE → AGGREGATE → ANALYZE → TRANSFORM → OUTPUT` |
+| Subject listing | `READ → FILTER → SORT → TRANSFORM → OUTPUT` |
+| ADaM derivation | `READ → FILTER → SORT → MERGE → DERIVE → VALIDATE → OUTPUT` |
+| Independent QC | `READ → CHECK → VALIDATE → OUTPUT` |
 
-Examples:
+The table is illustrative rather than prescriptive. A program should record only operations that materially improve execution reviewability.
+
+## 6. Selection guide
 
 ```text
-INFO [END] [T14_01] execution completed – duration=1.18s
-ERROR [END] [T14_01] execution failed – ValueError
+External input acquired?                    → READ
+Observation without an enforced rule?       → CHECK
+Rows/observations selected or excluded?      → FILTER
+Order intentionally changed?                 → SORT
+New named analytical concept created?        → DERIVE
+Representation or structure changed?         → TRANSFORM
+Multiple analytical sources combined?        → MERGE
+Detailed data reduced/grouped?                → AGGREGATE
+Statistical method/model/estimator applied?   → ANALYZE
+Explicit expectation tested?                  → VALIDATE
+External artifact produced?                   → OUTPUT
 ```
 
-`END` may carry status, duration, and exception details and should normally be generated automatically by TRACE lifecycle handling.
+If none fits cleanly, either the action is too low-level to deserve TRACE, `TRANSFORM` is the correct controlled operation, or a genuine vocabulary gap should be proposed deliberately.
 
----
+## 7. Excluded terms
 
-## 5. Operations Explicitly Excluded from v0.1
+| Excluded term | Use instead | Reason |
+|---|---|---|
+| `SUMMARY` | `AGGREGATE` or `ANALYZE` | Ambiguous between summary calculation, statistical analysis, and report output |
+| `SUBSET`, `WHERE`, `SELECT` | `FILTER` | Row-selection synonyms |
+| `JOIN`, `COMBINE`, `APPEND`, `CONCAT` | `MERGE` | Multi-source combination synonyms in v0.1 |
+| `LOAD`, `IMPORT`, `INGEST` | `READ` | Input-acquisition synonyms |
+| `WRITE`, `EXPORT`, `SAVE` | `OUTPUT` | Artifact-production synonyms |
+| `CALCULATE`, `COMPUTE`, `CREATE` | Depends on intent | Usually `DERIVE`, `AGGREGATE`, or `ANALYZE` |
+| `QC` | Workflow/context | Not one execution operation |
+| `ERROR`, `WARNING` | Severity | Not operations |
 
-### SUMMARY
+## 8. Lifecycle operations
 
-Excluded because it overlaps with `AGGREGATE`, `ANALYZE`, execution summaries, and report summaries. Use the more precise operation.
-
-### SUBSET / WHERE / SELECT
-
-Use `FILTER` when row selection is the semantic intent.
-
-### JOIN / COMBINE / APPEND / CONCAT
-
-Use `MERGE` in v0.1 and capture the combination mode in structured details. Reconsider only if real programs demonstrate a distinct semantic need.
-
-### LOAD / IMPORT / INGEST
-
-Use `READ`.
-
-### WRITE / EXPORT / SAVE
-
-Use `OUTPUT`.
-
-### CALCULATE / COMPUTE / CREATE
-
-These are action verbs, not canonical top-level operations. Use `DERIVE`, `AGGREGATE`, or `ANALYZE` according to intent.
-
-### QC
-
-QC is a workflow or execution context, not an operation.
-
-### ERROR / WARNING
-
-These are severities, not operations.
-
----
-
-## 6. Operation Selection Guide
+`START` and `END` belong to TRACE system vocabulary and should normally be generated by lifecycle mechanisms rather than emitted manually.
 
 ```text
-Did I acquire an external input?
-    → READ
-
-Am I observing something without enforcing a rule?
-    → CHECK
-
-Did I select/exclude observations?
-    → FILTER
-
-Did I intentionally reorder observations?
-    → SORT
-
-Did I create a new analytical variable/value/concept?
-    → DERIVE
-
-Did I materially change representation or structure?
-    → TRANSFORM
-
-Did I combine multiple analytical sources?
-    → MERGE
-
-Did I reduce/group detailed data into summary values?
-    → AGGREGATE
-
-Did I apply a statistical method/model/estimator?
-    → ANALYZE
-
-Did I test an explicit requirement or expectation?
-    → VALIDATE
-
-Did I produce an external artifact?
-    → OUTPUT
+INFO  [START] [T14_01] execution started
+INFO  [END]   [T14_01] execution completed – duration=1.18s
+ERROR [END]   [T14_01] execution failed – ValueError
 ```
 
-If none fits cleanly, that suggests either the event is too low-level to deserve TRACE, `TRANSFORM` is the correct controlled general operation, or a genuine vocabulary gap should be proposed deliberately.
+Step lifecycle is defined by the step-instrumentation specification rather than by adding another statistical operation.
 
----
+## 9. Governance
 
-## 7. Clinical Programming Examples
+The vocabulary should grow slowly. Add a new operation only when realistic programs repeatedly require it, existing operations would distort the meaning, the proposed term has stable backend-independent semantics, and it improves both human and machine interpretation.
 
-### 7.1 Demographics table
+A library method name or a desire for prettier examples is not sufficient justification.
 
-```text
-READ       ADSL
-FILTER     Safety population
-DERIVE     AGEGR1
-AGGREGATE  treatment × age group counts
-VALIDATE   treatment groups present
-OUTPUT     T14_01
-```
+## 10. v0.1 decisions
 
-### 7.2 Adverse event summary
-
-```text
-READ       ADAE
-READ       ADSL
-FILTER     treatment-emergent AEs
-MERGE      ADAE + ADSL
-AGGREGATE  subjects by SOC/PT/treatment
-VALIDATE   denominator groups
-OUTPUT     T14_03
-```
-
-### 7.3 Kaplan-Meier figure
-
-```text
-READ       ADTTE
-FILTER     ITT population / parameter
-SORT       subject/time ordering if required
-ANALYZE    Kaplan-Meier estimation
-VALIDATE   expected treatment strata
-OUTPUT     F14_01
-```
-
-### 7.4 ADaM derivation
-
-```text
-READ       SDTM inputs
-SORT       source records
-FILTER     relevant source observations
-MERGE      subject-level attributes
-DERIVE     analysis variables
-VALIDATE   key ADaM expectations
-OUTPUT     ADaM dataset
-```
-
-### 7.5 Independent QC program
-
-```text
-READ       production result
-READ       independently generated QC result
-CHECK      dimensions / labels / metadata
-VALIDATE   production vs QC equality
-OUTPUT     comparison report
-```
-
----
-
-## 8. Relationship to Phase 0 Event Model
-
-The operation vocabulary occupies one field in the TRACE Event:
-
-```text
-TRACE Event
-├── severity
-├── operation  ← Phase 1 vocabulary
-├── object
-├── action
-├── metrics
-├── details
-├── status
-└── context
-```
-
-An operation is not a complete message. It supplies the canonical event category; the other fields supply the specific execution meaning.
-
----
-
-## 9. Vocabulary Governance
-
-The TRACE vocabulary should grow slowly.
-
-A new operation should be added only when:
-
-1. realistic statistical programs repeatedly require it;
-2. existing operations cannot express it without semantic distortion;
-3. the proposed operation has a stable definition;
-4. it is meaningfully distinct from existing operations;
-5. it remains backend-independent; and
-6. it is useful for both human logs and machine consumers.
-
-A Python library method name is not sufficient justification for a new TRACE operation.
-
----
-
-## 10. Phase 1 Decisions
-
-**P1-01** — TRACE Core Operations v0.1 are:
-
-```text
-READ
-CHECK
-FILTER
-SORT
-DERIVE
-TRANSFORM
-MERGE
-AGGREGATE
-ANALYZE
-VALIDATE
-OUTPUT
-```
-
-**P1-02** — `START` and `END` are reserved lifecycle operations.
-
-**P1-03** — `SUMMARY` is excluded from v0.1.
-
-**P1-04** — `FILTER` is the canonical row-selection term.
-
-**P1-05** — `MERGE` is the canonical multi-source combination term for v0.1.
-
-**P1-06** — `AGGREGATE` and `ANALYZE` remain separate: grouping/reduction versus statistical methodology.
-
-**P1-07** — `CHECK` and `VALIDATE` remain separate: observation versus explicit expectation.
-
-**P1-08** — `DERIVE` and `TRANSFORM` remain separate: new analytical concept versus changed representation/structure.
-
-**P1-09** — Operations represent statistical-programming intent, not backend method names.
-
-**P1-10** — Vocabulary extensions require explicit design review rather than ad hoc new operation strings.
-
----
-
-## 11. Phase 1 Acceptance Criteria
-
-Phase 1 is complete when:
-
-1. every core operation has a distinct definition;
-2. common clinical-programming actions map predictably to the vocabulary;
-3. competing synonyms have an explicit canonical replacement;
-4. `CHECK` versus `VALIDATE` is clear;
-5. `DERIVE` versus `TRANSFORM` is clear;
-6. `AGGREGATE` versus `ANALYZE` is clear;
-7. `SUMMARY` is intentionally excluded;
-8. lifecycle operations are separated from ordinary domain operations;
-9. the vocabulary remains dataframe-library independent; and
-10. the vocabulary can classify realistic table, listing, figure, ADaM, and QC workflows.
-
----
-
-## 12. TRACE Core Operations v0.1
-
-The resulting canonical vocabulary is:
-
-```text
-READ
-CHECK
-FILTER
-SORT
-DERIVE
-TRANSFORM
-MERGE
-AGGREGATE
-ANALYZE
-VALIDATE
-OUTPUT
-```
-
-with TRACE-managed lifecycle operations:
-
-```text
-START
-END
-```
-
-This vocabulary becomes the semantic foundation for the next API-design phase.
+- The canonical statistical vocabulary remains the eleven operations listed in Section 1.
+- `START` and `END` remain TRACE-managed lifecycle operations.
+- `CHECK` and `VALIDATE` remain separate: observation versus explicit expectation.
+- `DERIVE` and `TRANSFORM` remain separate: new analytical concept versus representation/structure change.
+- `AGGREGATE` and `ANALYZE` remain separate: grouping/reduction versus statistical methodology.
+- Analysis populations remain `FILTER` results; no `POPULATION` operation is introduced.
+- Source dataset identity and resulting analytical identity should both be preserved when both matter.
+- Vocabulary extensions require explicit design review.
