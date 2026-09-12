@@ -31,6 +31,14 @@ def test_log_rejects_unknown_operation():
         trace.log("WHATEVER", object="ADSL", action="did something")
 
 
+@pytest.mark.parametrize("operation", ["START", "END", "STEP"])
+def test_log_rejects_lifecycle_and_scope_operations(operation):
+    trace = Trace("T14_01")
+
+    with pytest.raises(ValueError, match="managed by TRACE"):
+        trace.log(operation, object="T14_01", action="manual system event")
+
+
 def test_log_requires_nonempty_action():
     trace = Trace("T14_01")
     with pytest.raises(ValueError):
