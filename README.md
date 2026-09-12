@@ -34,13 +34,7 @@ trace.read(
     rows=254,
     columns=16,
 )
-trace.filter(
-    "ADSL",
-    "SAFFL == 'Y'",
-    result="Safety Population",
-    before=254,
-    after=249,
-)
+trace.filter("ADSL", "SAFFL == 'Y'", before=254, after=249)
 trace.derive("AGEGR1", dataset="ADSL", source="AGE")
 trace.aggregate(
     "Safety Population",
@@ -57,8 +51,6 @@ INFO [DERIVE]    [AGEGR1] created – dataset=ADSL, source=AGE
 INFO [AGGREGATE] [Safety Population] summarized – by=TRT01A,SEX,AGEGR1
 INFO [OUTPUT]    [T14_01] written – outputs/T14_01.rtf
 ```
-
-The concise text log does not need to display every structured field. For example, the named filter result may remain available in structured evidence while the text line emphasizes the source, condition, and count transition.
 
 In TRACE Core, values such as `rows=254` or `before=254` are supplied by the calling program unless an integration inspected runtime state directly. TRACE's structured evidence model preserves the distinction between **observed**, **supplied**, and **derived** diagnostics.
 
