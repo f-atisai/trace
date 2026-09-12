@@ -28,36 +28,44 @@ For substantial API or architectural changes, open an issue or design discussion
 
 ## Development Setup
 
-Clone the repository:
+Clone the repository and create an isolated environment:
 
 ```bash
 git clone https://github.com/f-atisai/trace.git
 cd trace
+python -m venv .venv
+source .venv/bin/activate
 ```
 
-Create and activate a virtual environment, then install TRACE in editable mode with development dependencies:
+On Windows PowerShell, activate the environment with:
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+Install TRACE in editable mode with the development dependencies:
 
 ```bash
+python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 ```
 
-Run tests:
+Run the development checks:
 
 ```bash
 pytest
-```
-
-Run linting:
-
-```bash
 ruff check .
-```
-
-Run type checking:
-
-```bash
 mypy src
 ```
+
+To verify that the distributable package can be built locally:
+
+```bash
+python -m build
+```
+
+This creates a source distribution and wheel under `dist/`. Build artifacts are
+ignored by Git and should not be committed.
 
 ## Project Layout
 
@@ -118,27 +126,8 @@ Use:
 
 - `docs/framework/` for TRACE conventions and normative methodology;
 - `docs/api/` for public Python API documentation;
-- `docs/guides/` for user-facing workflows;
-- `docs/design/` for design work that is still being evaluated.
+- `docs/guides/` for task-oriented user guidance;
+- `docs/design/` for design rationale and architecture decisions; and
+- `docs/examples/` for reviewer-oriented execution examples.
 
-## Pull Requests
-
-Keep pull requests focused. A pull request should solve one coherent problem and should avoid unrelated refactoring.
-
-A good pull request includes:
-
-- a concise explanation of the change;
-- the motivation;
-- tests where applicable;
-- documentation updates where applicable; and
-- any compatibility implications.
-
-## Versioning
-
-TRACE uses Semantic Versioning.
-
-Until `1.0.0`, backwards-incompatible API changes may occur as the design matures. They should still be deliberate, documented, and reflected in the changelog.
-
-## License
-
-By contributing to TRACE, you agree that your contributions will be licensed under the project's MIT License.
+Avoid duplicating authoritative definitions across documentation areas. Define each concept once and reference it elsewhere.
