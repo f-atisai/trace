@@ -23,7 +23,7 @@ VALIDATE
 OUTPUT
 ```
 
-`START` and `END` are reserved TRACE-managed lifecycle operations. `SUMMARY` is excluded because it overlaps with both `AGGREGATE` and `ANALYZE`.
+`START` and `END` are reserved TRACE-managed lifecycle operations. `STEP` belongs to the system/lifecycle layer. `SUMMARY` is excluded because it overlaps with both `AGGREGATE` and `ANALYZE`.
 
 ## 2. Selection principles
 
@@ -42,9 +42,9 @@ Not every line of code deserves a TRACE event. Record operations that materially
 
 ### Semantic identities
 
-TRACE names stable statistical-programming concepts rather than Python variables. Prefer `ADSL`, `ADAE`, `AGEGR1`, `Overall survival`, `TEAE_SAFETY`, and `T14_01` over `df`, `tmp`, or `merged_df`.
+TRACE names stable statistical-programming concepts rather than Python variables. Prefer `ADSL`, `ADAE`, `AGEGR1`, `Overall Survival`, `TEAE_SAFETY`, and `T14_01` over `df`, `tmp`, or `merged_df`.
 
-When an operation acts on one object and produces a separately meaningful analytical concept, preserve both identities rather than replacing the source identity casually.
+When an operation acts on one object and produces a separately meaningful analytical concept, preserve both identities rather than replacing the source identity.
 
 For example, selecting the Safety Population from ADSL is still a `FILTER` on `ADSL`; `Safety Population` is the resulting analytical concept:
 
@@ -54,8 +54,6 @@ condition:     SAFFL == 'Y'
 result:        Safety Population
 ```
 
-This rule prevents logs from losing physical dataset identity while still allowing reviewer-facing analytical concepts to be represented. Existing operation-specific result fields should be used where available; otherwise the result identity may remain structured metadata until repeated use justifies a dedicated API parameter.
-
 `ANALYZE` is intentionally different: the analysis or endpoint is the semantic subject of the event, while the source dataset is recorded separately.
 
 ## 3. Core operations
@@ -64,37 +62,36 @@ This rule prevents logs from losing physical dataset identity while still allowi
 
 **Means:** Acquire an external input for the current execution.
 
-**Typical examples:** read `ADSL`, `ADAE`, `ADTTE`, a metadata workbook, shell specification, or configuration file.
-
 ```text
-INFO [READ] [ADSL] loaded – N=754, Vars=16
+INFO [READ] [ADSL] loaded – rows=254, columns=16
 ```
+
+Typical inputs include `ADSL`, `ADAE`, `ADTTE`, metadata workbooks, specifications, and configuration files.
 
 **Does not mean:** create an in-memory result, derive a dataset, or write an output.
 
-**Common confusion:** use `READ`, not `LOAD`, `IMPORT`, or `INGEST`.
+`READ` identifies the semantic input object. Program-level provenance separately identifies the physical input artifact that participated in the run.
 
 ### 3.2 CHECK
 
 **Means:** Observe or inspect execution state without enforcing an expected outcome.
 
 ```text
-INFO [CHECK] [ADSL] treatment groups inspected – groups=3
-INFO [CHECK] [ADLBC] glucose visits inspected – visits=6
+INFO [CHECK] [ADSL] treatment groups inspected – treatment_groups=2
 ```
 
 Typical uses include diagnostic counts, data availability inspection, missingness observation, and temporary QC diagnostics.
 
 **Does not mean:** test a required rule.
 
-**Common confusion:** `CHECK` asks *what do we observe?*; `VALIDATE` asks *did an expectation hold?*
+`CHECK` asks *what do we observe?*; `VALIDATE` asks *did an expectation hold?*
 
 ### 3.3 FILTER
 
 **Means:** Retain or exclude observations according to a condition, including selection of an analysis population or analysis subset.
 
 ```text
-INFO [FILTER] [ADSL] SAFFL == 'Y' applied – N=754 → 720
+INFO [FILTER] [ADSL] SAFFL == 'Y' applied – N=254 → 249
 INFO [FILTER] [ADAE] TRTEMFL == 'Y' applied – N=4127 → 2964
 ```
 
@@ -109,7 +106,7 @@ ADSL + ITTFL == 'Y' → ITT Population
 
 **Does not mean:** select columns, order rows, group observations, or reshape data.
 
-**Common confusion:** creating a named population does not require a `POPULATION` operation; it remains `FILTER`.
+Creating a named population does not require a `POPULATION` operation; it remains `FILTER`.
 
 ### 3.4 SORT
 
@@ -122,10 +119,6 @@ INFO [SORT] [ADLBC] ordered – by=USUBJID,AVISITN
 
 Typical uses include chronological AE processing, LOCF preparation, lag/lead logic, and deterministic listing order.
 
-**Does not mean:** statistical ranking, grouping, or cosmetic ordering with no execution significance.
-
-**Common confusion:** `SORT` changes order; `TRANSFORM` changes representation or structure.
-
 ### 3.5 DERIVE
 
 **Means:** Create a named analytical concept that did not previously exist, such as a variable, flag, category, parameter, endpoint-derived value, or analysis value.
@@ -136,11 +129,7 @@ INFO [DERIVE] [TRTEMFL] created – dataset=ADAE
 INFO [DERIVE] [CHG] created – dataset=ADLBC, source=AVAL,BASE
 ```
 
-Typical uses include analysis flags, age groups, baseline flags, treatment-emergent flags, change from baseline, analysis day, and parameter derivations.
-
-**Does not mean:** merely change representation or layout.
-
-**Common confusion:** a new named analysis variable is normally `DERIVE` even when implemented by recoding, mapping, concatenation, or formatting. Use `TRANSFORM` when no new analytical concept is created.
+A new named analysis variable is normally `DERIVE` even when implemented by recoding, mapping, concatenation, or formatting. Use `TRANSFORM` when no new analytical concept is created.
 
 ### 3.6 TRANSFORM
 
@@ -152,11 +141,7 @@ INFO [TRANSFORM] [disposition_summary] pivoted to treatment columns
 INFO [TRANSFORM] [subject_listing] prepared display columns
 ```
 
-Typical uses include date parsing, long-to-wide reshaping, pivoting, representation-only recoding, display preparation, and analytically meaningful type conversion.
-
-**Does not mean:** join datasets, create a new analytical variable, filter rows, or perform a statistical model.
-
-**Common confusion:** `TRANSFORM` is a controlled fallback, not a catch-all. Prefer `FILTER`, `SORT`, `DERIVE`, `MERGE`, `AGGREGATE`, or `ANALYZE` when one fits.
+`TRANSFORM` is a controlled fallback, not a catch-all. Prefer a more specific operation when one fits.
 
 ### 3.7 MERGE
 
@@ -167,13 +152,9 @@ INFO [MERGE] [ADAE + ADSL] merged – on=USUBJID, how=inner
 INFO [MERGE] [AE counts + denominators] merged – on=TRT01A
 ```
 
-Typical uses include adding subject-level attributes to BDS/OCCDS data, joining denominators to summaries, and combining independently prepared analytical components.
+Typical uses include adding subject-level attributes, joining denominators to summaries, and combining independently prepared analytical components.
 
-Row concatenation may also use `MERGE` in v0.1 with a structured mode such as `concat_rows`.
-
-**Does not mean:** group/reduce one dataset or derive a variable.
-
-**Common confusion:** TRACE uses `MERGE` as the umbrella term for `JOIN`, `COMBINE`, `APPEND`, and `CONCAT` in v0.1.
+When cardinality evidence matters, use explicit units such as `left_rows`, `right_rows`, `result_rows`, `matched_subjects`, or `unmatched_keys` rather than ambiguous counts.
 
 ### 3.8 AGGREGATE
 
@@ -185,54 +166,47 @@ INFO [AGGREGATE] [ADAE] subject incidence created – by=TRT01A,AEBODSYS,AEDECOD
 INFO [AGGREGATE] [ADLBC] descriptive statistics created – by=TRTP,AVISIT
 ```
 
-Typical uses include demographics summaries, disposition counts, AE incidence, laboratory/vital-sign descriptive statistics, exposure summaries, and population denominators.
-
-**Does not mean:** fit a model or estimator whose statistical method is the primary semantic event.
-
-**Common confusion:** counts, means, SDs, and percentages are `AGGREGATE`; ANCOVA, MMRM, Kaplan–Meier, and Cox regression are `ANALYZE`.
+Counts, means, SDs, and percentages are `AGGREGATE`; ANCOVA, MMRM, Kaplan–Meier, and Cox regression are `ANALYZE`.
 
 ### 3.9 ANALYZE
 
 **Means:** Apply a statistical analytical method, model, estimator, inferential procedure, or analysis algorithm beyond simple grouping/reduction.
 
-The source dataset and the analysis identity remain distinct:
+The source dataset and analysis identity remain distinct:
 
 ```text
-source:   ADTTE
-analysis: Overall survival
-method:   Kaplan-Meier
+source:     ADTTE
+analysis:   Overall Survival
+method:     Kaplan-Meier
+population: ITT
+result:     km_curve
 ```
 
-Realistic examples:
+Examples:
 
 ```text
-INFO [ANALYZE] [Overall survival] Kaplan-Meier fitted – source=ADTTE, population=ITT
-INFO [ANALYZE] [Overall survival] Cox model fitted – source=ADTTE, population=ITT
+INFO [ANALYZE] [Overall Survival] Kaplan-Meier fitted – source=ADTTE, population=ITT
 INFO [ANALYZE] [Week 24 glucose change] ANCOVA fitted – source=ADLBC, population=Efficacy
 INFO [ANALYZE] [Change from baseline] MMRM fitted – source=ADVS, population=ITT
 ```
 
-Typical uses include Kaplan–Meier estimation, Cox regression, logistic regression, ANCOVA, MMRM, hypothesis tests, confidence intervals, and other defined statistical estimators.
-
-**Does not mean:** descriptive grouping, variable derivation, validation, or output generation.
-
-**Common confusion:** if the primary act is grouped summarization, use `AGGREGATE`; if a statistical method/model/estimator is applied, use `ANALYZE`.
+If the primary act is grouped summarization, use `AGGREGATE`; if a statistical method/model/estimator is applied, use `ANALYZE`.
 
 ### 3.10 VALIDATE
 
 **Means:** Evaluate an explicit expectation, requirement, rule, tolerance, or acceptance criterion.
 
 ```text
-INFO [VALIDATE] [ADSL] USUBJID uniqueness – PASS
+INFO    [VALIDATE] [ADSL] USUBJID uniqueness – PASS
 WARNING [VALIDATE] [T14_01] expected treatment groups present – FAIL
-INFO [VALIDATE] [QC comparison] production and QC results agree – PASS
+INFO    [VALIDATE] [QC comparison] production and QC results agree – PASS
 ```
 
 Typical uses include uniqueness, required values, expected treatment arms, shell conformity, tolerance checks, cross-dataset consistency, and independent production/QC comparisons.
 
-**Does not mean:** merely inspect data.
+A `PASS` means that the implemented validation criterion evaluated successfully. It does **not** establish overall statistical correctness. Supporting diagnostics may be observed, supplied, or derived; their origin determines how strongly TRACE itself can claim to have observed the evidence.
 
-**Common confusion:** `CHECK` observes; `VALIDATE` evaluates an expectation. `QC` is a workflow/context, not an operation.
+`CHECK` observes; `VALIDATE` evaluates an expectation. `QC` is a workflow/context, not an operation.
 
 ### 3.11 OUTPUT
 
@@ -243,15 +217,11 @@ INFO [OUTPUT] [T14_01] written – outputs/T14_01.rtf
 INFO [OUTPUT] [ADAE] written – adam/adae.xpt
 ```
 
-Typical outputs include tables, listings, figures, derived datasets, RTF/PDF/Excel/CSV/JSON files, QC reports, and execution manifests.
+Typical outputs include tables, listings, figures, derived datasets, RTF/PDF/Excel/CSV/JSON files, and QC reports.
 
-**Does not mean:** create a temporary in-memory object or emit a debug-only print statement.
-
-**Common confusion:** use `OUTPUT`, not `WRITE`, `EXPORT`, `SAVE`, or `PUBLISH` as a top-level operation.
+`OUTPUT` records the production action. Physical artifact identity and optional hashes belong to program-level execution provenance rather than being repeated as event metrics.
 
 ## 4. Boundary rules
-
-The most important semantic boundaries are:
 
 ```text
 CHECK      observe
@@ -268,7 +238,7 @@ Examples:
 
 ```text
 Inspect treatment-group count                 CHECK
-Require exactly three treatment groups        VALIDATE
+Require exactly two treatment groups          VALIDATE
 
 AGE → AGEGR1                                  DERIVE
 Pivot disposition rows to treatment columns   TRANSFORM
@@ -279,18 +249,16 @@ Kaplan-Meier estimation                       ANALYZE
 ANCOVA                                        ANALYZE
 ```
 
-## 5. Phase 10 statistical pressure test
+## 5. Statistical pressure test
 
-The v0.1 vocabulary was pressure-tested against realistic clinical-programming workflows, including Python submission examples containing population summaries, disposition tables, AE summaries, LOCF preparation, descriptive statistics, ANCOVA, and RTF output.
-
-No additional operation is required.
+The vocabulary has been pressure-tested against demographics, disposition, adverse-event, laboratory, vital-sign, exposure, survival, regression, longitudinal-model, listing, ADaM-derivation, and independent-QC workflows. No additional operation is currently required.
 
 | Scenario | Typical TRACE sequence |
 |---|---|
 | Analysis population | `READ → FILTER → CHECK/VALIDATE` |
-| Demographics | `READ → FILTER → DERIVE → AGGREGATE → TRANSFORM → OUTPUT` |
+| Demographics | `READ → FILTER → DERIVE → AGGREGATE → VALIDATE → OUTPUT` |
 | Disposition | `READ → FILTER → AGGREGATE → MERGE → TRANSFORM → OUTPUT` |
-| Adverse events | `READ → FILTER → MERGE → AGGREGATE → TRANSFORM → OUTPUT` |
+| Adverse events | `READ → FILTER → MERGE → AGGREGATE → VALIDATE → OUTPUT` |
 | Laboratory summaries | `READ → FILTER → DERIVE → AGGREGATE → TRANSFORM → OUTPUT` |
 | Vital-sign summaries | `READ → FILTER → DERIVE → AGGREGATE → TRANSFORM → OUTPUT` |
 | Exposure | `READ → FILTER → DERIVE → AGGREGATE → OUTPUT` |
@@ -299,10 +267,10 @@ No additional operation is required.
 | MMRM | `READ → FILTER → DERIVE → ANALYZE → VALIDATE → OUTPUT` |
 | ANCOVA | `READ → FILTER → MERGE → SORT → DERIVE → AGGREGATE → ANALYZE → TRANSFORM → OUTPUT` |
 | Subject listing | `READ → FILTER → SORT → TRANSFORM → OUTPUT` |
-| ADaM derivation | `READ → FILTER → SORT → MERGE → DERIVE → VALIDATE → OUTPUT` |
-| Independent QC | `READ → CHECK → VALIDATE → OUTPUT` |
+| ADaM derivation | `READ → SORT → FILTER → MERGE → DERIVE → VALIDATE → OUTPUT` |
+| Independent QC | `READ → MERGE → VALIDATE → OUTPUT` |
 
-The table is illustrative rather than prescriptive. A program should record only operations that materially improve execution reviewability.
+The table is illustrative rather than prescriptive. Record only operations that materially improve execution reviewability.
 
 ## 6. Selection guide
 
@@ -326,7 +294,8 @@ If none fits cleanly, either the action is too low-level to deserve TRACE, `TRAN
 
 | Excluded term | Use instead | Reason |
 |---|---|---|
-| `SUMMARY` | `AGGREGATE` or `ANALYZE` | Ambiguous between summary calculation, statistical analysis, and report output |
+| `POPULATION` | `FILTER` result | Population selection is row/observation selection, not a distinct execution operation |
+| `SUMMARY` | `AGGREGATE` or `ANALYZE` | Ambiguous between summary calculation and statistical analysis |
 | `SUBSET`, `WHERE`, `SELECT` | `FILTER` | Row-selection synonyms |
 | `JOIN`, `COMBINE`, `APPEND`, `CONCAT` | `MERGE` | Multi-source combination synonyms in v0.1 |
 | `LOAD`, `IMPORT`, `INGEST` | `READ` | Input-acquisition synonyms |
@@ -337,7 +306,7 @@ If none fits cleanly, either the action is too low-level to deserve TRACE, `TRAN
 
 ## 8. Lifecycle operations
 
-`START` and `END` belong to TRACE system vocabulary and should normally be generated by lifecycle mechanisms rather than emitted manually.
+`START`, `END`, and `STEP` belong to TRACE system vocabulary and should normally be generated by lifecycle/step mechanisms rather than emitted manually.
 
 ```text
 INFO  [START] [T14_01] execution started
@@ -345,21 +314,21 @@ INFO  [END]   [T14_01] execution completed – duration=1.18s
 ERROR [END]   [T14_01] execution failed – ValueError
 ```
 
-Step lifecycle is defined by the step-instrumentation specification rather than by adding another statistical operation.
-
 ## 9. Governance
 
-The vocabulary should grow slowly. Add a new operation only when realistic programs repeatedly require it, existing operations would distort the meaning, the proposed term has stable backend-independent semantics, and it improves both human and machine interpretation.
+The vocabulary should grow slowly. Add an operation only when realistic programs repeatedly require it, existing operations would distort the meaning, the proposed term has stable backend-independent semantics, and it improves both human and machine interpretation.
 
 A library method name or a desire for prettier examples is not sufficient justification.
 
 ## 10. v0.1 decisions
 
 - The canonical statistical vocabulary remains the eleven operations listed in Section 1.
-- `START` and `END` remain TRACE-managed lifecycle operations.
+- `START`, `END`, and `STEP` remain TRACE-managed system/lifecycle operations.
 - `CHECK` and `VALIDATE` remain separate: observation versus explicit expectation.
 - `DERIVE` and `TRANSFORM` remain separate: new analytical concept versus representation/structure change.
 - `AGGREGATE` and `ANALYZE` remain separate: grouping/reduction versus statistical methodology.
 - Analysis populations remain `FILTER` results; no `POPULATION` operation is introduced.
-- Source dataset identity and resulting analytical identity should both be preserved when both matter.
+- Source identity and resulting analytical identity should both be preserved when both matter.
+- `READ` and `OUTPUT` remain semantic events; physical artifact identity belongs to program-level provenance.
+- Validation outcomes describe implemented criteria and must not be presented as proof of statistical correctness.
 - Vocabulary extensions require explicit design review.
