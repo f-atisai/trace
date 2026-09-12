@@ -24,10 +24,24 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 
 adsl = pd.DataFrame(
     {
-        "USUBJID": ["STUDY01-003", "STUDY01-001", "STUDY01-006", "STUDY01-004", "STUDY01-002", "STUDY01-005"],
+        "USUBJID": [
+            "STUDY01-003",
+            "STUDY01-001",
+            "STUDY01-006",
+            "STUDY01-004",
+            "STUDY01-002",
+            "STUDY01-005",
+        ],
         "SAFFL": ["Y", "Y", "Y", "N", "Y", "Y"],
         "ITTFL": ["Y", "Y", "Y", "Y", "Y", "Y"],
-        "TRT01A": ["Drug A 100 mg", "Placebo", "Drug A 100 mg", "Placebo", "Placebo", "Drug A 100 mg"],
+        "TRT01A": [
+            "Drug A 100 mg",
+            "Placebo",
+            "Drug A 100 mg",
+            "Placebo",
+            "Placebo",
+            "Drug A 100 mg",
+        ],
         "AGE": [59, 44, 72, 66, 63, 51],
         "SEX": ["F", "M", "F", "M", "F", "M"],
     }
@@ -42,7 +56,13 @@ with Trace("L16_01", study="STUDY01") as trace:
     )
 
     listing = adsl.loc[adsl["SAFFL"] == "Y"].copy()
-    trace.filter("ADSL", "SAFFL == 'Y'", before=len(adsl), after=len(listing))
+    trace.filter(
+        "ADSL",
+        "SAFFL == 'Y'",
+        result="Safety Population",
+        before=len(adsl),
+        after=len(listing),
+    )
 
     listing = listing.sort_values(["TRT01A", "USUBJID"])
     trace.sort(
