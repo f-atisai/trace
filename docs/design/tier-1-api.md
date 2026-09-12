@@ -110,7 +110,6 @@ trace.filter(
     name,
     condition,
     *,
-    result=None,
     before=None,
     after=None,
     removed=None,
@@ -124,23 +123,20 @@ Example:
 trace.filter(
     "ADSL",
     "SAFFL == 'Y'",
-    result="Safety Population",
     before=len(adsl),
     after=len(safety),
 )
 ```
 
-`name` identifies the object being filtered. `result`, when supplied, identifies a separately meaningful analytical result without replacing the source identity.
-
-This distinction is especially useful for populations:
+`name` identifies the object being filtered. For population selection, the source identity remains important:
 
 ```text
 source/object: ADSL
 condition:     SAFFL == 'Y'
-result:        Safety Population
+conceptual result: Safety Population
 ```
 
-A population remains a `FILTER` result; TRACE does not introduce a separate `POPULATION` operation.
+The current Tier 1 API does not add a dedicated `result` parameter to `FILTER`. The reviewer pressure test showed that a named result can be useful, but final API evidence should come from the planned public-dataset examples before expanding the signature. Until then, population selection remains a `FILTER`; TRACE does not introduce a `POPULATION` operation.
 
 If `before` and `after` are present and `removed` is omitted, TRACE may derive `removed = before - after`. The current prototype field names are retained for compatibility; conceptually they represent row counts and should not be mistaken for subjects or another analytical unit.
 
@@ -159,10 +155,7 @@ trace.sort(
 Example:
 
 ```python
-trace.sort(
-    "ADAE",
-    by=["USUBJID", "AESTDTC"],
-)
+trace.sort("ADAE", by=["USUBJID", "AESTDTC"])
 ```
 
 ## `trace.derive()`
@@ -181,11 +174,7 @@ trace.derive(
 Example:
 
 ```python
-trace.derive(
-    "AGEGR1",
-    dataset="ADSL",
-    source="AGE",
-)
+trace.derive("AGEGR1", dataset="ADSL", source="AGE")
 ```
 
 Use `DERIVE` when the result is a named analytical concept, including an analysis variable, parameter, flag, category, or endpoint-derived value. This remains true when the implementation uses recoding, mapping, concatenation, or formatting.
@@ -215,7 +204,7 @@ trace.transform(
 )
 ```
 
-`TRANSFORM` changes representation or structure without creating a new analytical concept. It is a controlled general-purpose operation and should not replace a more specific operation such as `DERIVE`, `FILTER`, or `MERGE`.
+`TRANSFORM` changes representation or structure without creating a new analytical concept. It is a controlled general-purpose operation and should not replace a more specific operation.
 
 ## `trace.merge()`
 
@@ -254,7 +243,7 @@ trace.merge(
 )
 ```
 
-`left_rows`, `right_rows`, and `result_rows` have explicit units and are therefore stable named parameters. Matching diagnostics are workflow-dependent: "matched" may mean rows, keys, subjects, or another unit, so record them through `metrics` using unit-bearing names such as `matched_subjects` or `unmatched_keys`.
+`left_rows`, `right_rows`, and `result_rows` have explicit units and are therefore stable named parameters. Matching diagnostics are workflow-dependent, so use unit-bearing metric names such as `matched_subjects` or `unmatched_keys`.
 
 ## `trace.aggregate()`
 
@@ -274,14 +263,14 @@ Example:
 
 ```python
 trace.aggregate(
-    "ADSL",
+    "Safety Population",
     by=["TRT01A", "SEX", "AGEGR1"],
     result="demographics_summary",
     method="distinct subjects",
 )
 ```
 
-`AGGREGATE` covers grouping and reduction such as participant counts, incidence summaries, means, standard deviations, and percentages. `method` is optional when the reduction benefits from additional explanation.
+`AGGREGATE` covers grouping and reduction such as participant counts, incidence summaries, means, standard deviations, and percentages.
 
 ## `trace.analyze()`
 
@@ -311,9 +300,7 @@ trace.analyze(
 
 `source` identifies the analytical input. `analysis` identifies the endpoint, estimand, or analysis. `method` names the method or model. `population` optionally identifies the analysis population, while `result` identifies the produced analytical result.
 
-These identities remain separate because collapsing them would make the execution evidence less precise.
-
-Method-specific metadata such as time variable, censoring variable, or strata belongs in `details` until repeated use establishes stable cross-method parameters.
+These identities remain separate because collapsing them would make the execution evidence less precise. Method-specific metadata such as time variable, censoring variable, or strata belongs in `details` until repeated use establishes stable cross-method parameters.
 
 ## `trace.validate()`
 
@@ -359,15 +346,10 @@ trace.output(
 Example:
 
 ```python
-trace.output(
-    "T14_01",
-    "outputs/T14_01.rtf",
-)
+trace.output("T14_01", "outputs/T14_01.rtf")
 ```
 
 `OUTPUT` records that a named analytical artifact was produced. Physical artifact identity and optional hashes belong to program-level provenance rather than being repeated as event metrics.
-
-Prefer `name` over `object` in Tier 1 Python signatures to avoid shadowing the built-in `object`.
 
 ## Cross-method consistency
 
@@ -388,31 +370,6 @@ Exceptions follow natural semantics:
 trace.merge("ADAE", "ADSL", on="USUBJID")
 trace.derive("AGEGR1", dataset="ADSL", source="AGE")
 trace.analyze("ADTTE", "Overall Survival", method="Kaplan-Meier")
-```
-
-Descriptions central to the event may be positional:
-
-```python
-trace.filter("ADSL", "SAFFL == 'Y'")
-trace.check("ADSL", "treatment groups inspected")
-trace.transform("subject_listing", "reporting columns selected")
-trace.validate("ADSL", "USUBJID uniqueness", passed=True)
-```
-
-Structural metadata remains keyword-only:
-
-```text
-by
-on
-how
-source
-dataset
-result
-method
-population
-rows
-before
-after
 ```
 
 `details` is the controlled structured escape hatch for uncommon metadata.
@@ -436,14 +393,6 @@ trace.merge(
 Generic `metrics` is reserved for measurements whose semantics vary by workflow:
 
 ```python
-trace.check(
-    "ADSL",
-    "treatment groups inspected",
-    metrics={"treatment_groups": 2},
-)
-```
-
-```python
 trace.validate(
     "ADSL",
     "USUBJID uniqueness",
@@ -456,27 +405,14 @@ The structured evidence model must preserve diagnostic origin even when the conc
 
 ## What is not Tier 1
 
-The following do not define the primary statistical-programming experience:
-
-```python
-trace.log(...)
-trace.event(...)
-trace.emit(...)
-trace.bind(...)
-trace.step(...)
-trace.debug(...)
-trace.info(...)
-trace.warning(...)
-```
-
-`trace.step()` is a supported system/lifecycle API, not a Tier 1 statistical operation. `trace.log()` is the secondary generic structured-event API.
+`trace.step()` is a supported system/lifecycle API, not a Tier 1 statistical operation. `trace.log()` is the secondary generic structured-event API. Severity-first logging helpers do not define the primary TRACE experience.
 
 ## Recommended Tier 1 surface
 
 ```python
 trace.read(name, *, source=None, rows=None, columns=None, details=None)
 trace.check(name, check, *, metrics=None, details=None)
-trace.filter(name, condition, *, result=None, before=None, after=None, removed=None, details=None)
+trace.filter(name, condition, *, before=None, after=None, removed=None, details=None)
 trace.sort(name, *, by, ascending=None, details=None)
 trace.derive(variable, *, dataset=None, source=None, method=None, details=None)
 trace.transform(name, transformation, *, source=None, result=None, details=None)
@@ -507,7 +443,6 @@ with Trace("T14_01") as trace:
     trace.filter(
         "ADSL",
         "SAFFL == 'Y'",
-        result="Safety Population",
         before=len(adsl),
         after=len(safety),
     )
@@ -517,7 +452,7 @@ with Trace("T14_01") as trace:
 
     summary = ...
     trace.aggregate(
-        "ADSL",
+        "Safety Population",
         by=["TRT01A", "SEX", "AGEGR1"],
         result="demographics_summary",
     )
@@ -531,31 +466,17 @@ TRACE records the analytical execution after the underlying operation; it does n
 ## Decisions
 
 - Tier 1 contains eleven methods: `read`, `check`, `filter`, `sort`, `derive`, `transform`, `merge`, `aggregate`, `analyze`, `validate`, `output`.
-- Tier 1 method names map directly to the canonical vocabulary.
 - Core semantic identifiers may be positional; rich metadata is keyword-only.
-- Common calls should usually require no more than one or two positional arguments.
 - Stable operation-specific metrics with unambiguous units get named parameters.
 - Generic `metrics` is reserved for inherently variable measurements.
 - `details` is the structured escape hatch for uncommon metadata.
-- Logging infrastructure is not exposed through Tier 1 methods.
 - `ANALYZE` retains distinct source and analysis identities.
 - Core `READ` is semantic-first: `trace.read(name, ...)`; runtime-object inspection belongs to optional integrations.
 - Named populations remain `FILTER` results; no `POPULATION` operation is introduced.
+- A dedicated FILTER `result` parameter remains deferred until realistic public-dataset examples justify expanding the API.
 - A `VALIDATE` result records the outcome of the implemented criterion, not proof of overall statistical correctness.
 - Tier 1 must continue to satisfy the minimum programmer-experience friction budget.
 
 ## Acceptance criteria
 
-The Tier 1 design is successful when:
-
-1. every canonical operation has a clear method;
-2. naming is obvious and predictable;
-3. common calls stay concise;
-4. richer metadata is optional;
-5. secondary metadata is keyword-only;
-6. realistic clinical workflows fit without ceremony;
-7. statistical procedures have a first-class `analyze()` method;
-8. Python logging internals remain hidden;
-9. structured metadata is supported without unrestricted `**kwargs`;
-10. runtime-object inspection remains optional rather than a Core requirement; and
-11. reviewer-facing evidence does not imply more certainty than its diagnostic origin supports.
+The Tier 1 design is successful when every canonical operation has a clear method, common calls remain concise, runtime-object inspection remains optional, statistical procedures remain first-class, and reviewer-facing evidence does not imply more certainty than its diagnostic origin supports.
