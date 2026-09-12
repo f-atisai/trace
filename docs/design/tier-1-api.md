@@ -6,9 +6,7 @@
 
 ## Purpose
 
-TRACE should expose a small, obvious public API that maps directly to the canonical vocabulary defined in Phase 1.
-
-The Tier 1 API is:
+TRACE exposes a small public API that maps directly to the canonical statistical-programming vocabulary.
 
 ```python
 trace.read()
@@ -26,20 +24,25 @@ trace.output()
 
 > **Common calls require very few arguments; richer metadata is optional.**
 
-## General Rules
+TRACE Core is semantic and object-independent. Core calls identify analytical objects and accept structured evidence; optional integrations may inspect runtime objects to collect observed diagnostics.
 
-- Positional arguments identify the core event.
+## General rules
+
+- Positional arguments identify the core semantic event.
 - Richer metadata is keyword-only.
 - Optional means truly optional.
 - Avoid unrestricted `**kwargs`.
 - Similar concepts use consistent names.
 - Tier 1 methods do not expose Python logging configuration.
+- Semantic identifiers should be reviewer-meaningful names such as `ADSL`, `AGEGR1`, `Overall Survival`, or `T14_01`, not implementation names such as `df` or `tmp`.
+- Quantitative diagnostics belong in metrics; descriptive metadata belongs in details.
+- Diagnostic units should be explicit where a count could mean rows, subjects, keys, groups, or another analytical unit.
+- Core-supplied diagnostic values are not equivalent to values observed by an integration. The evidence-origin model is defined in [`reviewer-experience.md`](reviewer-experience.md).
 
 ## `trace.read()`
 
 ```python
 trace.read(
-    data,
     name,
     *,
     source=None,
@@ -52,20 +55,29 @@ trace.read(
 Common:
 
 ```python
-trace.read(adsl, "ADSL")
+trace.read("ADSL")
 ```
 
 Richer:
 
 ```python
 trace.read(
-    adsl,
     "ADSL",
     source="analysis/adsl.parquet",
+    rows=254,
+    columns=16,
 )
 ```
 
-`data` exists so supported integrations can infer rows, columns, and object type. TRACE must not retain the full object.
+`name` is the semantic identity of the acquired input. TRACE Core does not require or retain the runtime DataFrame.
+
+A future integration may inspect a runtime object and emit the equivalent semantic event, for example conceptually:
+
+```python
+trace.pandas.read(adsl, "ADSL", source="analysis/adsl.parquet")
+```
+
+The integration may observe dimensions directly; Core callers may supply them.
 
 ## `trace.check()`
 
@@ -85,7 +97,7 @@ Example:
 trace.check(
     "ADSL",
     "treatment groups inspected",
-    metrics={"groups": 3},
+    metrics={"treatment_groups": 2},
 )
 ```
 
@@ -98,6 +110,7 @@ trace.filter(
     name,
     condition,
     *,
+    result=None,
     before=None,
     after=None,
     removed=None,
@@ -111,12 +124,25 @@ Example:
 trace.filter(
     "ADSL",
     "SAFFL == 'Y'",
+    result="Safety Population",
     before=len(adsl),
     after=len(safety),
 )
 ```
 
-If `before` and `after` are present and `removed` is omitted, TRACE may derive `removed = before - after`.
+`name` identifies the object being filtered. `result`, when supplied, identifies a separately meaningful analytical result without replacing the source identity.
+
+This distinction is especially useful for populations:
+
+```text
+source/object: ADSL
+condition:     SAFFL == 'Y'
+result:        Safety Population
+```
+
+A population remains a `FILTER` result; TRACE does not introduce a separate `POPULATION` operation.
+
+If `before` and `after` are present and `removed` is omitted, TRACE may derive `removed = before - after`. The current prototype field names are retained for compatibility; conceptually they represent row counts and should not be mistaken for subjects or another analytical unit.
 
 ## `trace.sort()`
 
@@ -162,9 +188,9 @@ trace.derive(
 )
 ```
 
-`source` may later accept either a single source or multiple sources.
+Use `DERIVE` when the result is a named analytical concept, including an analysis variable, parameter, flag, category, or endpoint-derived value. This remains true when the implementation uses recoding, mapping, concatenation, or formatting.
 
-Use `DERIVE` whenever the result is a named analytical concept, including an analysis variable, parameter, flag, category, or endpoint-derived value. This remains true when the implementation uses recoding, mapping, concatenation, or formatting.
+`source` may identify one or multiple source variables.
 
 ## `trace.transform()`
 
@@ -183,14 +209,13 @@ Example:
 
 ```python
 trace.transform(
-    "subject_listing",
-    "selected and ordered display columns",
-    source="ADSL",
-    result="listing_display",
+    "Safety Population",
+    "reporting columns selected",
+    result="subject_listing",
 )
 ```
 
-`TRANSFORM` changes representation or structure without creating a new analytical concept. It remains the controlled general-purpose operation and should not replace a more specific operation such as `DERIVE` or `MERGE`.
+`TRANSFORM` changes representation or structure without creating a new analytical concept. It is a controlled general-purpose operation and should not replace a more specific operation such as `DERIVE`, `FILTER`, or `MERGE`.
 
 ## `trace.merge()`
 
@@ -210,35 +235,7 @@ trace.merge(
 )
 ```
 
-Common:
-
-```python
-trace.merge(
-    "ADAE",
-    "ADSL",
-    on="USUBJID",
-    how="left",
-)
-```
-
-Richer:
-
-```python
-trace.merge(
-    "ADAE",
-    "ADSL",
-    on="USUBJID",
-    how="left",
-    result="ADAE_ANALYSIS",
-    left_rows=len(adae),
-    right_rows=len(adsl),
-    result_rows=len(analysis),
-)
-```
-
-`*_rows` is preferred over `*_n` for clarity and consistency.
-
-`left_rows`, `right_rows`, and `result_rows` are stable named parameters because their units are explicit. Matching diagnostics are workflow-dependent: "matched" may mean rows, keys, subjects, or another analytical unit. Record them through `metrics` using an explicit unit-bearing name:
+Example:
 
 ```python
 trace.merge(
@@ -256,6 +253,8 @@ trace.merge(
     },
 )
 ```
+
+`left_rows`, `right_rows`, and `result_rows` have explicit units and are therefore stable named parameters. Matching diagnostics are workflow-dependent: "matched" may mean rows, keys, subjects, or another unit, so record them through `metrics` using unit-bearing names such as `matched_subjects` or `unmatched_keys`.
 
 ## `trace.aggregate()`
 
@@ -276,12 +275,13 @@ Example:
 ```python
 trace.aggregate(
     "ADSL",
-    by=["TRT01A", "AGEGR1"],
-    result="summary",
+    by=["TRT01A", "SEX", "AGEGR1"],
+    result="demographics_summary",
+    method="distinct subjects",
 )
 ```
 
-`method` is optional for cases such as subject-incidence counts or descriptive statistics.
+`AGGREGATE` covers grouping and reduction such as participant counts, incidence summaries, means, standard deviations, and percentages. `method` is optional when the reduction benefits from additional explanation.
 
 ## `trace.analyze()`
 
@@ -302,18 +302,18 @@ Example:
 ```python
 trace.analyze(
     "ADTTE",
-    "Overall survival",
+    "Overall Survival",
     method="Kaplan-Meier",
     population="ITT",
     result="km_curve",
 )
 ```
 
-`source` is the analytical input identity. `analysis` is the analysis, endpoint, or estimand identity. `method` names the statistical method or model, while `result` remains reserved for the produced result object or artifact. This reads as: analyze `ADTTE` for `Overall survival` using Kaplan–Meier.
+`source` identifies the analytical input. `analysis` identifies the endpoint, estimand, or analysis. `method` names the method or model. `population` optionally identifies the analysis population, while `result` identifies the produced analytical result.
 
-The one-identity form is not used because it forces a choice between identifying the analytical input and identifying the analysis. Overloading `result` with the analysis identity is also rejected because a result is a distinct produced object.
+These identities remain separate because collapsing them would make the execution evidence less precise.
 
-`ANALYZE` is Tier 1 because statistical procedures are central to clinical statistical programming. Method-specific metadata remains in `details` until repeated use establishes a stable cross-method parameter.
+Method-specific metadata such as time variable, censoring variable, or strata belongs in `details` until repeated use establishes stable cross-method parameters.
 
 ## `trace.validate()`
 
@@ -332,13 +332,16 @@ Example:
 
 ```python
 trace.validate(
-    "ADSL",
-    "USUBJID uniqueness",
-    passed=True,
+    "T14_01",
+    "production and QC statistics match",
+    passed=statistics_match,
+    metrics={"mismatched_rows": mismatched_rows},
 )
 ```
 
-`passed` is required and keyword-only because the validation result is core semantic information.
+`passed` is required and keyword-only because the validation outcome is core semantic information.
+
+A `PASS` means only that the implemented validation criterion evaluated successfully. It does not establish that the program, analysis, or output is statistically correct. The evidentiary strength of supporting diagnostics depends on whether they were observed, supplied, or derived.
 
 ## `trace.output()`
 
@@ -358,31 +361,33 @@ Example:
 ```python
 trace.output(
     "T14_01",
-    "T14_01.xlsx",
+    "outputs/T14_01.rtf",
 )
 ```
 
-Prefer `name` over `object` in Python signatures to avoid shadowing the built-in `object`.
+`OUTPUT` records that a named analytical artifact was produced. Physical artifact identity and optional hashes belong to program-level provenance rather than being repeated as event metrics.
 
-## Cross-Method Consistency
+Prefer `name` over `object` in Tier 1 Python signatures to avoid shadowing the built-in `object`.
 
-The first argument generally names the primary object:
+## Cross-method consistency
+
+The first argument generally identifies the primary semantic object:
 
 ```python
-trace.filter("ADSL", ...)
-trace.sort("ADAE", ...)
-trace.aggregate("ADAE", ...)
-trace.validate("ADSL", ...)
-trace.output("T14_01", ...)
+trace.read("ADSL")
+trace.filter("ADSL", "SAFFL == 'Y'")
+trace.sort("ADAE", by=["USUBJID", "AESTDTC"])
+trace.aggregate("ADAE", by=["TRT01A", "AEBODSYS"])
+trace.validate("ADSL", "USUBJID uniqueness", passed=True)
+trace.output("T14_01", "outputs/T14_01.rtf")
 ```
 
 Exceptions follow natural semantics:
 
 ```python
-trace.read(data, "ADSL")
-trace.merge("ADAE", "ADSL", ...)
-trace.derive("AGEGR1", ...)
-trace.analyze("ADTTE", "Overall survival", method="Kaplan-Meier")
+trace.merge("ADAE", "ADSL", on="USUBJID")
+trace.derive("AGEGR1", dataset="ADSL", source="AGE")
+trace.analyze("ADTTE", "Overall Survival", method="Kaplan-Meier")
 ```
 
 Descriptions central to the event may be positional:
@@ -390,7 +395,7 @@ Descriptions central to the event may be positional:
 ```python
 trace.filter("ADSL", "SAFFL == 'Y'")
 trace.check("ADSL", "treatment groups inspected")
-trace.transform("AESTDTC", "parsed to analysis date")
+trace.transform("subject_listing", "reporting columns selected")
 trace.validate("ADSL", "USUBJID uniqueness", passed=True)
 ```
 
@@ -412,28 +417,29 @@ after
 
 `details` is the controlled structured escape hatch for uncommon metadata.
 
-## Named Metrics vs Generic `metrics`
+## Named metrics versus generic `metrics`
 
-Named metrics are preferred where the operation has stable measurements:
+Named metrics are preferred where an operation has stable measurements with clear units:
 
 ```python
-trace.filter(..., before=754, after=720)
+trace.filter("ADSL", "SAFFL == 'Y'", before=254, after=249)
 
 trace.merge(
-    ...,
+    "ADAE",
+    "ADSL",
     left_rows=4127,
     right_rows=754,
     result_rows=4127,
 )
 ```
 
-Generic `metrics` is reserved for operations whose measurements vary widely:
+Generic `metrics` is reserved for measurements whose semantics vary by workflow:
 
 ```python
 trace.check(
     "ADSL",
     "treatment groups inspected",
-    metrics={"groups": 3},
+    metrics={"treatment_groups": 2},
 )
 ```
 
@@ -442,13 +448,15 @@ trace.validate(
     "ADSL",
     "USUBJID uniqueness",
     passed=False,
-    metrics={"checked": 754, "failed": 3},
+    metrics={"duplicate_subjects": 3},
 )
 ```
 
-## What Is Not Tier 1
+The structured evidence model must preserve diagnostic origin even when the concise text renderer omits origin labels.
 
-The following should not define the primary user experience:
+## What is not Tier 1
+
+The following do not define the primary statistical-programming experience:
 
 ```python
 trace.log(...)
@@ -461,258 +469,93 @@ trace.info(...)
 trace.warning(...)
 ```
 
-Some may exist later as advanced APIs.
+`trace.step()` is a supported system/lifecycle API, not a Tier 1 statistical operation. `trace.log()` is the secondary generic structured-event API.
 
-## Recommended Tier 1 Surface
-
-```python
-trace.read(
-    data,
-    name,
-    *,
-    source=None,
-    rows=None,
-    columns=None,
-    details=None,
-)
-
-trace.check(
-    name,
-    check,
-    *,
-    metrics=None,
-    details=None,
-)
-
-trace.filter(
-    name,
-    condition,
-    *,
-    before=None,
-    after=None,
-    removed=None,
-    details=None,
-)
-
-trace.sort(
-    name,
-    *,
-    by,
-    ascending=None,
-    details=None,
-)
-
-trace.derive(
-    variable,
-    *,
-    dataset=None,
-    source=None,
-    method=None,
-    details=None,
-)
-
-trace.transform(
-    name,
-    transformation,
-    *,
-    source=None,
-    result=None,
-    details=None,
-)
-
-trace.merge(
-    left,
-    right,
-    *,
-    on=None,
-    how=None,
-    result=None,
-    left_rows=None,
-    right_rows=None,
-    result_rows=None,
-    metrics=None,
-    details=None,
-)
-
-trace.aggregate(
-    name,
-    *,
-    by=None,
-    result=None,
-    method=None,
-    rows=None,
-    details=None,
-)
-
-trace.analyze(
-    source,
-    analysis,
-    *,
-    method,
-    population=None,
-    result=None,
-    details=None,
-)
-
-trace.validate(
-    name,
-    check,
-    *,
-    passed,
-    metrics=None,
-    details=None,
-)
-
-trace.output(
-    name,
-    path,
-    *,
-    format=None,
-    rows=None,
-    details=None,
-)
-```
-
-## Design Concerns Before Implementation
-
-### `read(data, name)` argument order
-
-Current:
+## Recommended Tier 1 surface
 
 ```python
-trace.read(adsl, "ADSL")
+trace.read(name, *, source=None, rows=None, columns=None, details=None)
+trace.check(name, check, *, metrics=None, details=None)
+trace.filter(name, condition, *, result=None, before=None, after=None, removed=None, details=None)
+trace.sort(name, *, by, ascending=None, details=None)
+trace.derive(variable, *, dataset=None, source=None, method=None, details=None)
+trace.transform(name, transformation, *, source=None, result=None, details=None)
+trace.merge(left, right, *, on=None, how=None, result=None, left_rows=None, right_rows=None, result_rows=None, metrics=None, details=None)
+trace.aggregate(name, *, by=None, result=None, method=None, rows=None, details=None)
+trace.analyze(source, analysis, *, method, population=None, result=None, details=None)
+trace.validate(name, check, *, passed, metrics=None, details=None)
+trace.output(name, path, *, format=None, rows=None, details=None)
 ```
 
-Alternative:
+## API friction test
 
-```python
-trace.read("ADSL", data=adsl)
-```
-
-The current form matches Phase 2 and is concise, but most methods place the semantic name first. This should be paper-tested before implementation freeze.
-
-### `details` typing
-
-Prefer a structured mapping rather than arbitrary text:
-
-```python
-details: Mapping[str, object] | None
-```
-
-Free text can be represented as:
-
-```python
-details={"message": "..."}
-```
-
-This keeps events serialization-friendly.
-
-### `passed` and internal status
-
-The ergonomic public API may use:
-
-```python
-passed=True
-```
-
-while mapping internally to canonical TRACE Status.
-
-Users should not need to know the internal status representation for common validation calls.
-
-## API Friction Test
-
-The Phase 2 benchmark should remain essentially unchanged:
+A routine TLF program should remain recognizably ordinary Python:
 
 ```python
 from trace_tlf import Trace
 
-trace = Trace("T14_01")
+with Trace("T14_01") as trace:
+    adsl = pd.read_parquet("analysis/adsl.parquet")
+    trace.read(
+        "ADSL",
+        source="analysis/adsl.parquet",
+        rows=len(adsl),
+        columns=len(adsl.columns),
+    )
 
-adsl = pd.read_csv("adsl.csv")
-trace.read(adsl, "ADSL")
+    safety = adsl.loc[adsl["SAFFL"] == "Y"].copy()
+    trace.filter(
+        "ADSL",
+        "SAFFL == 'Y'",
+        result="Safety Population",
+        before=len(adsl),
+        after=len(safety),
+    )
 
-safety = adsl.loc[adsl["SAFFL"] == "Y"].copy()
-trace.filter(
-    "ADSL",
-    "SAFFL == 'Y'",
-    before=len(adsl),
-    after=len(safety),
-)
+    safety["AGEGR1"] = ...
+    trace.derive("AGEGR1", dataset="ADSL", source="AGE")
 
-safety["AGEGR1"] = ...
-trace.derive(
-    "AGEGR1",
-    dataset="ADSL",
-    source="AGE",
-)
+    summary = ...
+    trace.aggregate(
+        "ADSL",
+        by=["TRT01A", "SEX", "AGEGR1"],
+        result="demographics_summary",
+    )
 
-summary = ...
-trace.aggregate(
-    "ADSL",
-    by=["TRT01A", "AGEGR1"],
-    result="summary",
-)
-
-summary.to_excel("T14_01.xlsx")
-trace.output(
-    "T14_01",
-    "T14_01.xlsx",
-)
+    summary.to_excel("outputs/T14_01.xlsx")
+    trace.output("T14_01", "outputs/T14_01.xlsx")
 ```
 
-## Phase 3 Decisions
+TRACE records the analytical execution after the underlying operation; it does not own the transformation itself.
 
-**P3-01** — Tier 1 contains eleven methods: `read`, `check`, `filter`, `sort`, `derive`, `transform`, `merge`, `aggregate`, `analyze`, `validate`, `output`.
+## Decisions
 
-**P3-02** — Tier 1 method names map directly to Phase 1 vocabulary.
+- Tier 1 contains eleven methods: `read`, `check`, `filter`, `sort`, `derive`, `transform`, `merge`, `aggregate`, `analyze`, `validate`, `output`.
+- Tier 1 method names map directly to the canonical vocabulary.
+- Core semantic identifiers may be positional; rich metadata is keyword-only.
+- Common calls should usually require no more than one or two positional arguments.
+- Stable operation-specific metrics with unambiguous units get named parameters.
+- Generic `metrics` is reserved for inherently variable measurements.
+- `details` is the structured escape hatch for uncommon metadata.
+- Logging infrastructure is not exposed through Tier 1 methods.
+- `ANALYZE` retains distinct source and analysis identities.
+- Core `READ` is semantic-first: `trace.read(name, ...)`; runtime-object inspection belongs to optional integrations.
+- Named populations remain `FILTER` results; no `POPULATION` operation is introduced.
+- A `VALIDATE` result records the outcome of the implemented criterion, not proof of overall statistical correctness.
+- Tier 1 must continue to satisfy the minimum programmer-experience friction budget.
 
-**P3-03** — Core semantic identifiers may be positional; rich metadata is keyword-only.
+## Acceptance criteria
 
-**P3-04** — Common calls should usually require no more than one or two positional arguments.
+The Tier 1 design is successful when:
 
-**P3-05** — Stable operation-specific metrics with unambiguous units get named parameters.
-
-**P3-06** — Generic `metrics` is reserved for inherently variable measurements, including merge diagnostics whose analytical unit varies by workflow.
-
-**P3-07** — `details` is the structured escape hatch for uncommon metadata.
-
-**P3-08** — Logging infrastructure is not exposed through Tier 1 methods.
-
-**P3-09** — `ANALYZE` is included in Tier 1 and takes distinct `source` and `analysis` identities.
-
-**P3-10** — Tier 1 must continue to satisfy the Phase 2 friction budget.
-
-## Acceptance Criteria
-
-Phase 3 is complete when:
-
-1. every Phase 1 core operation has a clear Tier 1 method;
+1. every canonical operation has a clear method;
 2. naming is obvious and predictable;
 3. common calls stay concise;
-4. rich metadata is optional;
+4. richer metadata is optional;
 5. secondary metadata is keyword-only;
 6. realistic clinical workflows fit without ceremony;
 7. statistical procedures have a first-class `analyze()` method;
 8. Python logging internals remain hidden;
 9. structured metadata is supported without unrestricted `**kwargs`;
-10. the Phase 2 TLF remains recognizably unchanged.
-
-## Outcome
-
-TRACE's Tier 1 surface is intentionally small:
-
-```python
-trace.read()
-trace.check()
-trace.filter()
-trace.sort()
-trace.derive()
-trace.transform()
-trace.merge()
-trace.aggregate()
-trace.analyze()
-trace.validate()
-trace.output()
-```
-
-> **Common calls require very few arguments; richer metadata is optional.**
+10. runtime-object inspection remains optional rather than a Core requirement; and
+11. reviewer-facing evidence does not imply more certainty than its diagnostic origin supports.
