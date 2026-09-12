@@ -14,7 +14,6 @@ with trace.step("Safety Population"):
     trace.filter(
         "ADSL",
         "SAFFL == 'Y'",
-        result="Safety Population",
         before=len(adsl),
         after=len(safety),
     )
@@ -87,32 +86,22 @@ Call helper
 Write temporary file
 ```
 
-A useful rule is:
-
 > **Use a step when its name helps a reviewer understand the program's analytical structure.**
 
 TRACE should not require a step around every operation. Successful steps add two lifecycle events, so excessive instrumentation creates noise quickly. Small programs may need no explicit steps at all.
 
 ## 5. Steps are explicit
 
-TRACE does not infer steps automatically from:
+TRACE does not infer steps automatically from Python functions, notebook cells, source-code blocks, or Quarto headings.
 
-- Python functions;
-- notebook cells;
-- source-code blocks; or
-- Quarto headings.
-
-A programmer may choose a step name that aligns with a Quarto section or program section, but the relationship is intentional rather than automatic.
-
-This keeps TRACE independent of authoring environment and prevents structural noise from becoming execution semantics.
+A programmer may choose a step name that aligns with a Quarto section or program section, but the relationship is intentional rather than automatic. This keeps TRACE independent of authoring environment and prevents structural noise from becoming execution semantics.
 
 ## 6. Interaction with program lifecycle
 
-Steps may be used inside either construction style:
+Steps work with either construction style:
 
 ```python
 trace = Trace("T14_01")
-
 with trace.step("Safety Population"):
     ...
 ```
@@ -164,7 +153,6 @@ with Trace("T14_01") as trace:
         trace.filter(
             "ADSL",
             "SAFFL == 'Y'",
-            result="Safety Population",
             before=len(adsl),
             after=len(safety),
         )
@@ -192,7 +180,7 @@ INFO [STEP]      [Demographic summary] completed – 0.018s
 INFO [END]       [T14_01] execution completed – 0.071s
 ```
 
-The concise text rendering does not need to display every structured field. For example, the FILTER result identity may remain available in structured evidence even when the rendered line emphasizes source, condition, and count transition.
+The step name can make the analytical result concept visible to a reviewer without changing FILTER's source identity or requiring a new `POPULATION` operation.
 
 ## 10. Related specifications
 
