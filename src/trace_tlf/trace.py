@@ -116,6 +116,7 @@ class Trace:
                 severity=Severity.ERROR,
             )
         except Exception:
+            # Never replace the program's original exception with instrumentation failure.
             pass
         return False
 
@@ -181,6 +182,8 @@ class Trace:
         self._require_non_negative_int(before, "before")
         self._require_non_negative_int(after, "after")
         self._require_non_negative_int(removed, "removed")
+        if before is not None and after is not None and after > before:
+            raise ValueError("after must be <= before for a FILTER operation")
         if removed is None and before is not None and after is not None:
             removed = before - after
         if (
@@ -752,6 +755,7 @@ class _StepScope:
                         severity=Severity.ERROR,
                     )
                 except Exception:
+                    # Never replace the program's original exception with instrumentation.
                     pass
         finally:
             popped = self._trace._step_stack.pop()
