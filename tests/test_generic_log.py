@@ -40,31 +40,56 @@ def test_log_requires_nonempty_action():
 def test_log_requires_metrics_mapping():
     trace = Trace("T14_01")
     with pytest.raises(TypeError, match="metrics"):
-        trace.log("CHECK", object="ADSL", action="row count observed", metrics=["rows", 754])
+        trace.log(
+            "CHECK",
+            object="ADSL",
+            action="row count observed",
+            metrics=["rows", 754],
+        )
 
 
 def test_log_requires_details_mapping():
     trace = Trace("T14_01")
     with pytest.raises(TypeError, match="details"):
-        trace.log("CHECK", object="ADSL", action="row count observed", details="source=adsl.csv")
+        trace.log(
+            "CHECK",
+            object="ADSL",
+            action="row count observed",
+            details="source=adsl.csv",
+        )
 
 
 def test_log_normalizes_status():
     trace = Trace("T14_01")
-    event = trace.log("VALIDATE", object="ADSL", action="USUBJID uniqueness", status="success")
+    event = trace.log(
+        "VALIDATE",
+        object="ADSL",
+        action="USUBJID uniqueness",
+        status="success",
+    )
     assert event.status is Status.SUCCESS
 
 
 def test_log_rejects_invalid_status():
     trace = Trace("T14_01")
     with pytest.raises(ValueError, match="invalid status"):
-        trace.log("VALIDATE", object="ADSL", action="USUBJID uniqueness", status="PASSED")
+        trace.log(
+            "VALIDATE",
+            object="ADSL",
+            action="USUBJID uniqueness",
+            status="PASSED",
+        )
 
 
 def test_generic_derive_is_semantically_equivalent_to_tier1():
     trace = Trace("T14_01")
     tier1 = trace.derive("AGEGR1", dataset="ADSL", source="AGE")
-    generic = trace.log("DERIVE", object="AGEGR1", action="created", details={"dataset": "ADSL", "source": "AGE"})
+    generic = trace.log(
+        "DERIVE",
+        object="AGEGR1",
+        action="created",
+        details={"dataset": "ADSL", "source": "AGE"},
+    )
     assert generic.operation is tier1.operation
     assert generic.object == tier1.object
     assert generic.action == tier1.action
