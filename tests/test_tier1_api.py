@@ -1,6 +1,9 @@
 import pytest
 
-from trace_tlf import Operation, Severity, Status, Trace
+from trace_tlf import Trace
+from trace_tlf.operations import Operation
+from trace_tlf.severity import Severity
+from trace_tlf.status import Status
 
 
 def test_read():
@@ -21,20 +24,30 @@ def test_check():
     assert event.action == "row count observed"
 
 
-def test_filter_derives_removed():
+def test_filter_derives_removed_and_preserves_result_identity():
     trace = Trace("T14_01")
     event = trace.filter(
         "ADSL",
         "SAFFL == 'Y'",
+        result="Safety Population",
         before=754,
         after=720,
     )
 
+    assert event.object == "ADSL"
+    assert event.details["result"] == "Safety Population"
     assert event.metrics == {
         "before": 754,
         "after": 720,
         "removed": 34,
     }
+
+
+def test_filter_rejects_empty_result_identity():
+    trace = Trace("T14_01")
+
+    with pytest.raises(ValueError):
+        trace.filter("ADSL", "SAFFL == 'Y'", result="")
 
 
 def test_filter_rejects_inconsistent_removed():
@@ -60,11 +73,7 @@ def test_sort():
 
 def test_derive():
     trace = Trace("T14_01")
-    event = trace.derive(
-        "AGEGR1",
-        dataset="ADSL",
-        source="AGE",
-    )
+    event = trace.derive("AGEGR1", dataset="ADSL", source="AGE")
 
     assert event.operation is Operation.DERIVE
     assert event.object == "AGEGR1"
@@ -141,11 +150,7 @@ def test_analyze():
 
 def test_validate_pass_maps_status_and_severity():
     trace = Trace("T14_01")
-    event = trace.validate(
-        "ADSL",
-        "USUBJID is unique",
-        passed=True,
-    )
+    event = trace.validate("ADSL", "USUBJID is unique", passed=True)
 
     assert event.status is Status.SUCCESS
     assert event.severity is Severity.INFO
@@ -166,12 +171,7 @@ def test_validate_fail_maps_status_and_severity():
 
 def test_output():
     trace = Trace("T14_01")
-    event = trace.output(
-        "T14_01",
-        "T14_01.xlsx",
-        format="xlsx",
-        rows=42,
-    )
+    event = trace.output("T14_01", "T14_01.xlsx", format="xlsx", rows=42)
 
     assert event.operation is Operation.OUTPUT
     assert event.details["path"] == "T14_01.xlsx"
@@ -187,51 +187,30 @@ def test_details_are_preserved_and_normalized_metadata_added():
         details={"library": "analysis"},
     )
 
-    assert event.details == {
-        "library": "analysis",
-        "source": "adsl.csv",
-    }
+    assert event.details == {"library": "analysis", "source": "adsl.csv"}
 
 
-def test_phase_2_benchmark_api(capsys):
+def test_alpha_benchmark_api(capsys):
     trace = Trace("T14_01")
-
-    trace.read(
-        "ADSL",
-        source="adsl.csv",
-        rows=754,
-        columns=16,
-    )
-
+    trace.read("ADSL", source="adsl.csv", rows=754, columns=16)
     trace.filter(
         "ADSL",
         "SAFFL == 'Y'",
+        result="Safety Population",
         before=754,
         after=720,
     )
-
-    trace.derive(
-        "AGEGR1",
-        dataset="ADSL",
-        source="AGE",
-    )
-
+    trace.derive("AGEGR1", dataset="ADSL", source="AGE")
     trace.aggregate(
-        "ADSL",
+        "Safety Population",
         by=["TRT01A", "AGEGR1"],
         result="summary",
     )
-
-    trace.output(
-        "T14_01",
-        "T14_01.xlsx",
-        rows=6,
-    )
+    trace.output("T14_01", "T14_01.xlsx", rows=6)
 
     output = capsys.readouterr().err
-
     assert "INFO [READ] [ADSL] loaded" in output
     assert "INFO [FILTER] [ADSL] SAFFL == 'Y' applied – N=754 → 720" in output
     assert "INFO [DERIVE] [AGEGR1] created" in output
-    assert "INFO [AGGREGATE] [ADSL] summarized" in output
+    assert "INFO [AGGREGATE] [Safety Population] summarized" in output
     assert "INFO [OUTPUT] [T14_01] written – T14_01.xlsx, N=6" in output
