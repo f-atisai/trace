@@ -28,7 +28,8 @@ It should not restate an established specification merely to provide context.
 | Program lifecycle | [`lifecycle.md`](lifecycle.md) |
 | Step instrumentation | [`step-level-instrumentation.md`](step-level-instrumentation.md) |
 | Programmer experience principles | [`minimum-programmer-experience.md`](minimum-programmer-experience.md) |
-| Reviewer model and execution evidence | [`reviewer-experience.md`](reviewer-experience.md) |
+| Reviewer model and diagnostic evidence | [`reviewer-experience.md`](reviewer-experience.md) |
+| Execution provenance | [`provenance.md`](provenance.md) |
 | Prototype findings | [`reference-prototype-findings.md`](reference-prototype-findings.md) |
 
 When a later design phase depends on one of these concepts, it should link to the authoritative document instead of redefining it.
