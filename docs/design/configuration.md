@@ -4,30 +4,22 @@
 **Status:** Draft normative configuration specification  
 **Scope:** `Trace(...)` construction, defaults, configuration boundaries, and advanced logger access
 
-## 1. Purpose
+## 1. Decision
 
-TRACE configuration should be defined separately from operation logging.
-
-A programmer should configure TRACE once:
+TRACE is configured once per instance; operation calls remain focused on execution semantics.
 
 ```python
 from trace_tlf import Trace
 
 trace = Trace("T14_01")
-```
-
-and then write normal TRACE events:
-
-```python
 trace.read(...)
 trace.filter(...)
-trace.derive(...)
 trace.output(...)
 ```
 
-> **Configure TRACE once; log semantic operations many times.**
+> **Configure TRACE once; record semantic operations many times.**
 
-## 2. Canonical Constructor
+## 2. Canonical constructor
 
 The recommended initial constructor is:
 
@@ -47,20 +39,12 @@ Minimal:
 trace = Trace("T14_01")
 ```
 
-Explicit:
+Typical explicit configuration:
 
 ```python
 trace = Trace(
     program="T14_01",
     study="ABC123",
-)
-```
-
-Advanced but still ordinary:
-
-```python
-trace = Trace(
-    program="T14_01",
     log_file="logs/T14_01.log",
     level="INFO",
 )
@@ -68,101 +52,25 @@ trace = Trace(
 
 This should represent approximately the upper end of routine configuration complexity.
 
-## 3. `program`
+## 3. Configuration fields
 
-`program` is required and identifies the statistical program or execution unit.
+### `program`
 
-Examples:
+Required identifier for the statistical program or execution unit, for example `T14_01`, `ADSL`, or `qc_T14_01`. It becomes inherited event context.
 
-```text
-T14_01
-L16_02
-F14_03
-ADSL
-ADAE
-qc_T14_01
-```
+### `study`
 
-It becomes inherited event context:
+Optional study identifier. It remains optional so TRACE also supports examples, utilities, tests, non-clinical workflows, and cross-study programs.
 
-```json
-{
-  "context": {
-    "program": "T14_01"
-  }
-}
-```
+### `log_file`
 
-TRACE should allow both:
+Optional human-readable log destination. When omitted, the initial default is console output with no unexpected file creation.
 
-```python
-Trace("T14_01")
-```
+Users should not need to configure a Python `FileHandler` for normal file logging.
 
-and:
+### `level`
 
-```python
-Trace(program="T14_01")
-```
-
-## 4. `study`
-
-`study` is optional inherited context.
-
-```python
-trace = Trace(
-    program="T14_01",
-    study="ABC123",
-)
-```
-
-Conceptually:
-
-```json
-{
-  "context": {
-    "program": "T14_01",
-    "study": "ABC123"
-  }
-}
-```
-
-It remains optional because TRACE must also support examples, utilities, non-clinical workflows, unit tests, and cross-study programming.
-
-## 5. `log_file`
-
-`log_file` optionally defines the human-readable TRACE log destination.
-
-```python
-trace = Trace(
-    "T14_01",
-    log_file="logs/T14_01.log",
-)
-```
-
-The user should not have to create or configure a Python `FileHandler`.
-
-When omitted, the recommended initial behavior is:
-
-```text
-console output enabled
-file output disabled
-```
-
-TRACE should not unexpectedly create files in the current directory.
-
-## 6. `level`
-
-`level` controls the minimum emitted severity.
-
-```python
-trace = Trace(
-    "T14_01",
-    level="WARNING",
-)
-```
-
-Recommended documented values:
+Minimum emitted severity. Documented values follow the TRACE severity model:
 
 ```text
 DEBUG
@@ -172,28 +80,13 @@ ERROR
 CRITICAL
 ```
 
-Default:
+Default: `INFO`.
 
-```python
-level="INFO"
-```
+Severity semantics themselves are defined in [`domain-model.md`](domain-model.md).
 
-Users should not need to import `logging.INFO`.
+## 4. Configuration boundary
 
-Configuration level is distinct from event semantics:
-
-```text
-operation
-status
-severity
-configured output threshold
-```
-
-are separate concepts.
-
-## 7. Configuration Must Not Leak into Operation Calls
-
-Avoid:
+Operation methods describe execution events, not logger configuration. Avoid APIs such as:
 
 ```python
 trace.filter(
@@ -206,419 +99,49 @@ trace.filter(
 )
 ```
 
-Avoid passing handlers or formatters to `trace.output()` or `trace.validate()`.
+Likewise, ordinary `Trace(...)` construction should not expose handler, formatter, propagation, stream, or encoding configuration unless a demonstrated advanced use case requires it.
 
-Tier 1 and Tier 2 calls describe execution events, not logger configuration.
+The statistical-programming abstraction should remain more prominent than the underlying Python logging infrastructure.
 
-## 8. Hide Python Logging Complexity
+## 5. Inherited context
 
-Do not make this part of the ordinary API:
+Instance configuration establishes context shared by emitted events. At minimum this includes `program` and optional `study`; lifecycle may add execution identity such as `run_id`.
 
-```python
-Trace(
-    handlers=[...],
-    formatters=[...],
-    propagate=False,
-    mode="a",
-    stream=True,
-    encoding="utf8",
-)
-```
+Context should be established once rather than repeated on every operation call.
 
-These are implementation details.
+The canonical context model belongs to [`domain-model.md`](domain-model.md), while run behavior belongs to [`lifecycle.md`](lifecycle.md).
 
-Exposing them would make TRACE feel like a thin wrapper over Python logging and undermine its statistical-programming abstraction.
+## 6. Advanced logger access
 
-## 9. Advanced Escape Hatch
-
-Expert users may eventually access:
+Expert users may eventually access the underlying logger through:
 
 ```python
 trace.logger
 ```
 
-Example:
+This is an escape hatch, not the normal TRACE API. Direct logger mutation may affect TRACE behavior and need not be guaranteed by the high-level public contract.
 
-```python
-trace = Trace("T14_01")
+TRACE should not require knowledge of `logging.Handler`, `logging.Formatter`, `logger.propagate`, or dictionary configuration for routine use.
 
-logger = trace.logger
-```
+## 7. File behavior
 
-This should be documented as advanced infrastructure, not normal TRACE usage.
+Phase 6 establishes that `log_file` selects a file destination but does not independently freeze all run/file-mode semantics.
 
-Arbitrary mutations to the underlying logger may affect high-level TRACE behavior and need not be guaranteed by the primary API contract.
+Questions such as append versus one-file-per-run should be resolved in conjunction with lifecycle and run identity rather than by exposing raw `FileHandler` options in the constructor.
 
-## 10. Inherited Context
+Whatever policy is chosen should be predictable, documented, and safe for repeated statistical-program execution.
 
-Configuration owns instance-level context.
+## 8. Validation
 
-At minimum:
+Configuration should fail early for clearly invalid values such as an empty program identifier or unsupported severity level.
 
-```text
-program
-study
-```
+TRACE should avoid silently accepting misspelled configuration keys or ambiguous combinations that could cause evidence to be written somewhere unexpected.
 
-Potential future fields:
+Detailed exception classes and validation mechanics remain implementation concerns unless they become part of the public API contract.
 
-```text
-run_id
-environment
-trace_version
-output
-user_context
-```
+## 9. Related specifications
 
-Users should not repeat program/study on every event:
-
-```python
-trace = Trace(
-    "T14_01",
-    study="ABC123",
-)
-
-trace.filter(
-    "ADSL",
-    "SAFFL == 'Y'",
-    before=754,
-    after=720,
-)
-```
-
-The event should inherit the configured context automatically.
-
-## 11. Context Snapshot Rule
-
-Each emitted event should receive a snapshot of the current inherited context.
-
-Serialized events should not depend on a mutable live `Trace` configuration object.
-
-This preserves event self-containment.
-
-## 12. Recommended Defaults
-
-Conceptually:
-
-```text
-program       = required
-study         = None
-level         = INFO
-console       = enabled
-log_file      = disabled
-format        = TRACE default renderer
-encoding      = UTF-8
-propagation   = internally controlled
-```
-
-Only high-level concepts should be exposed initially.
-
-## 13. Console Default
-
-Console output should be enabled by default.
-
-That gives immediate value in:
-
-```text
-local development
-CI
-containers
-notebooks
-batch environments
-cloud execution
-```
-
-File output remains explicit.
-
-## 14. Parent Directory Handling
-
-For:
-
-```python
-Trace(
-    "T14_01",
-    log_file="logs/T14_01.log",
-)
-```
-
-TRACE should preferably create missing parent directories when safe.
-
-Permission and filesystem failures should raise clear configuration/runtime errors.
-
-## 15. File Mode
-
-Do not expose `mode="a"` or `mode="w"` initially.
-
-The exact default interacts with lifecycle and run identity, so file mode should remain an implementation detail until those semantics are frozen.
-
-## 16. Encoding
-
-Do not expose encoding initially.
-
-TRACE text output should use UTF-8 internally.
-
-## 17. Streams and Propagation
-
-Do not expose ordinary constructor parameters such as:
-
-```python
-stream=True
-propagate=False
-```
-
-TRACE should select safe internal defaults.
-
-Advanced users can later work through `trace.logger`.
-
-## 18. Formatters
-
-Do not expose arbitrary Python logging formatters in the initial constructor.
-
-TRACE's standard text renderer is part of its consistency promise.
-
-Custom rendering belongs in a later advanced API.
-
-## 19. Configuration Precedence
-
-Future sources may include:
-
-```text
-constructor arguments
-environment variables
-configuration files
-TRACE defaults
-```
-
-Recommended precedence:
-
-```text
-constructor arguments
-        ↓
-external configuration
-        ↓
-TRACE defaults
-```
-
-Phase 6 freezes constructor behavior only.
-
-## 20. No Configuration File Yet
-
-Do not require:
-
-```text
-trace.yaml
-trace.toml
-.traceconfig
-```
-
-for v0.x.
-
-Organization-wide configuration may be added later, but five-minute adoption remains:
-
-```python
-trace = Trace("T14_01")
-```
-
-## 21. No Required Global Configuration
-
-TRACE should not require:
-
-```python
-trace_tlf.configure(...)
-```
-
-before creating instances.
-
-Instance-level configuration is easier to test, isolate, and reason about.
-
-## 22. Multiple Instances
-
-This should be valid:
-
-```python
-prod_trace = Trace(
-    "T14_01",
-    log_file="logs/prod.log",
-)
-
-qc_trace = Trace(
-    "qc_T14_01",
-    log_file="logs/qc.log",
-)
-```
-
-Internal logger naming and handler management must avoid collisions.
-
-## 23. Constructor Validation
-
-Fail early on invalid high-level configuration.
-
-Validate at least:
-
-```text
-program is non-empty
-study is text when supplied
-level is recognized
-log_file is path-like/string when supplied
-```
-
-Do not impose sponsor-specific naming conventions.
-
-## 24. Level Normalization
-
-TRACE may normalize:
-
-```python
-Trace("T14_01", level="info")
-```
-
-to:
-
-```text
-INFO
-```
-
-Exact normalization rules should be frozen during implementation hardening.
-
-## 25. Configuration Does Not Change Event Shape
-
-These:
-
-```python
-Trace("T14_01")
-```
-
-and:
-
-```python
-Trace(
-    "T14_01",
-    study="ABC123",
-    log_file="logs/T14_01.log",
-    level="INFO",
-)
-```
-
-should still produce the same semantic event model.
-
-Configuration affects inherited context and output policy, not operation semantics.
-
-## 26. Architecture
-
-Conceptually:
-
-```text
-Trace(...)
-   │
-   ├── inherited context
-   │     ├── program
-   │     └── study
-   │
-   ├── output policy
-   │     ├── level
-   │     ├── console
-   │     └── log_file
-   │
-   └── internal logger
-          ↓
-Tier 1 / Tier 2 event creation
-          ↓
-TraceEvent
-          ↓
-rendering/output
-```
-
-## 27. Future Advanced Configuration
-
-Potential later features:
-
-```text
-JSON sinks
-multiple sinks
-custom renderers
-organization defaults
-environment variables
-rotation
-remote telemetry
-custom streams
-```
-
-Do not add these to the base constructor merely because Python logging supports them.
-
-A future `TraceConfig` object may be appropriate if advanced configuration grows substantially.
-
-## 28. Phase 6 Decisions
-
-**P6-01** — Configuration is instance-level and separate from event calls.
-
-**P6-02** — Canonical constructor:
-
-```python
-Trace(
-    program,
-    *,
-    study=None,
-    log_file=None,
-    level="INFO",
-)
-```
-
-**P6-03** — `Trace("T14_01")` is the minimum useful configuration.
-
-**P6-04** — `program` is required inherited context.
-
-**P6-05** — `study` is optional inherited context.
-
-**P6-06** — `log_file` is optional and abstracts file-handler setup.
-
-**P6-07** — Default output threshold is `INFO`.
-
-**P6-08** — Console output is enabled by default; file output is explicit.
-
-**P6-09** — Handlers, formatters, propagation, streams, encoding, and file mode are not part of the ordinary constructor.
-
-**P6-10** — UTF-8 and low-level logging behavior remain internal defaults.
-
-**P6-11** — `trace.logger` is the advanced logger escape hatch.
-
-**P6-12** — Configuration affects context and output policy, not event semantics.
-
-**P6-13** — No configuration file or global initialization is required initially.
-
-**P6-14** — Multiple `Trace` instances must remain independently configurable.
-
-## 29. Acceptance Criteria
-
-Phase 6 is complete when:
-
-1. a useful TRACE instance can be created in one line;
-2. configuration does not repeat across event calls;
-3. ordinary users need no Python logging knowledge;
-4. program and study context are inherited automatically;
-5. log-file selection is simple;
-6. severity threshold selection is simple;
-7. low-level controls remain hidden;
-8. expert users retain a future escape hatch through `trace.logger`;
-9. defaults are sensible and backend-independent;
-10. the design preserves the Phase 2 friction budget.
-
-## 30. Outcome
-
-TRACE configuration is intentionally small:
-
-```python
-trace = Trace("T14_01")
-```
-
-with optional enrichment:
-
-```python
-trace = Trace(
-    program="T14_01",
-    study="ABC123",
-    log_file="logs/T14_01.log",
-    level="INFO",
-)
-```
-
-> **Configure TRACE once; keep operation logging focused on statistical meaning.**
+- [`domain-model.md`](domain-model.md) — context and severity semantics.
+- [`minimum-programmer-experience.md`](minimum-programmer-experience.md) — routine-use complexity constraints.
+- [`lifecycle.md`](lifecycle.md) — run identity, START/END behavior, and lifecycle-related file semantics.
+- [`tier-1-api.md`](tier-1-api.md) — operation methods that consume the configured TRACE instance.
