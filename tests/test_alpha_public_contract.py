@@ -6,7 +6,6 @@ from trace_tlf import Trace
 from trace_tlf.operations import Operation
 from trace_tlf.rendering import render_text
 
-
 EXPECTED_METHOD_PARAMETERS = {
     "read": ["self", "name", "source", "rows", "columns", "details"],
     "check": ["self", "name", "check", "metrics", "details"],
