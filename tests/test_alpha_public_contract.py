@@ -1,6 +1,7 @@
 import inspect
 
 import pytest
+
 from trace_tlf import Trace
 from trace_tlf.operations import Operation
 from trace_tlf.rendering import render_text
