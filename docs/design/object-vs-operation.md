@@ -14,8 +14,8 @@ Canonical style:
 trace.filter(
     "ADSL",
     "SAFFL == 'Y'",
-    before=754,
-    after=720,
+    before=254,
+    after=249,
 )
 ```
 
@@ -63,15 +63,27 @@ Useful identifiers include:
 ```text
 ADSL
 ADAE
+ADTTE
 TEAE_SAFETY
+Safety Population
+Overall Survival
 demographics_summary
-Overall survival
 T14_01
 ```
 
 They should survive implementation changes and remain meaningful to a reviewer.
 
 TRACE must not inspect Python variable names and treat names such as `df`, `tmp`, or `merged_df` as authoritative analytical identities.
+
+When an operation acts on one object and produces a separately meaningful result, both identities may matter. For example:
+
+```text
+source/object: ADSL
+condition:     SAFFL == 'Y'
+result:        Safety Population
+```
+
+The source remains the event object; the named population is the result of the filter. TRACE does not need a separate `POPULATION` operation.
 
 The event model and object field semantics are defined in [`domain-model.md`](domain-model.md).
 
@@ -82,8 +94,8 @@ A Core call receives semantic identity plus structured evidence:
 ```python
 trace.read(
     "ADSL",
-    source="adsl.csv",
-    rows=754,
+    source="analysis/adsl.parquet",
+    rows=254,
     columns=16,
 )
 ```
@@ -94,7 +106,7 @@ A future integration may inspect a runtime object and emit the equivalent event:
 trace.pandas.read(
     adsl,
     "ADSL",
-    source="adsl.csv",
+    source="analysis/adsl.parquet",
 )
 ```
 
@@ -102,7 +114,29 @@ The integration may derive objective metadata such as row count, column count, m
 
 The same rule applies to FILTER, MERGE, and other operations: object inspection may enrich an explicitly declared operation; it does not determine which TRACE operation occurred.
 
-## 5. Data-minimization and retention
+## 5. Evidence origin
+
+Core and integrations can produce diagnostics with different evidentiary strength.
+
+```text
+SUPPLIED   caller passed the value to TRACE
+OBSERVED   TRACE or an integration inspected runtime state or an artifact
+DERIVED    TRACE calculated the value from diagnostics with known origins
+```
+
+For example:
+
+```python
+trace.read("ADSL", rows=len(adsl))
+```
+
+records a **supplied** row count from the perspective of TRACE Core. A pandas integration that directly inspects `adsl` may record the equivalent count as **observed**.
+
+The semantic event can be identical while the diagnostic origin differs. Structured TRACE representations must preserve that distinction; the concise text renderer need not label every metric inline.
+
+The governing diagnostic-evidence model is defined in [`reviewer-experience.md`](reviewer-experience.md).
+
+## 6. Data minimization and retention
 
 TRACE Core events must contain serializable semantic information and safe structured metadata, not retained runtime objects.
 
@@ -111,14 +145,14 @@ Core must not retain DataFrames, LazyFrames, Arrow tables, database relations, m
 Integrations should default to metadata rather than raw clinical data. For example:
 
 ```text
-rows=754
+rows=254
 columns=16
-missing=3
+duplicate_subjects=2
 ```
 
 is appropriate; retaining row values or subject-level records is not.
 
-## 6. Dependency direction
+## 7. Dependency direction
 
 Runtime integrations depend on Core, never the reverse:
 
@@ -130,24 +164,26 @@ Core must remain usable without pandas, Polars, PyArrow, or another dataframe de
 
 A future package may expose optional integrations through extras, but packaging details are not part of this decision.
 
-## 7. Consequences
+## 8. Consequences
 
 This decision means:
 
 - semantic identities remain stable across backends;
 - Core stays lightweight and backend-independent;
-- observed diagnostics can be added through integrations without changing operation meaning;
+- Core may record supplied diagnostics without representing them as independently observed;
+- integrations may produce observed diagnostics without changing operation meaning;
 - TRACE does not become a dataframe transformation framework;
 - runtime-object inspection remains optional; and
 - public API changes belong in the API specification rather than this architecture record.
 
-The main cost is that Core callers may initially provide some diagnostics explicitly. Phase 10's reviewer work may refine how asserted and observed evidence are distinguished without reopening this boundary unnecessarily.
+The main cost is that Core callers may initially provide some diagnostics explicitly. That trade-off is preferable to coupling the semantic API to a dataframe backend.
 
-## 8. Related specifications
+## 9. Related specifications
 
 - [`domain-model.md`](domain-model.md) — event structure and semantic object identity.
 - [`../framework/core-operations-v0.1.md`](../framework/core-operations-v0.1.md) — canonical operation meanings.
 - [`tier-1-api.md`](tier-1-api.md) — public operation signatures.
-- [`reviewer-experience.md`](reviewer-experience.md) — observed diagnostics and reviewer-facing evidence.
+- [`reviewer-experience.md`](reviewer-experience.md) — diagnostic origins and reviewer-facing evidence.
+- [`provenance.md`](provenance.md) — program-level execution and artifact provenance.
 
 Future documents should reference this decision rather than reproduce the Core-versus-integration rationale.
