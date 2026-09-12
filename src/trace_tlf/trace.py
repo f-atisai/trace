@@ -6,7 +6,8 @@ import time
 from collections.abc import Mapping, Sequence
 from numbers import Integral, Real
 from pathlib import Path
-from typing import Any
+from types import TracebackType
+from typing import Any, Literal
 from uuid import uuid4
 
 from .context import TraceContext
@@ -82,7 +83,12 @@ class Trace:
         )
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> bool:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> Literal[False]:
         if self._lifecycle_state != "RUNNING":
             raise RuntimeError("Trace lifecycle is not running")
         started_at = self._started_at
@@ -498,6 +504,8 @@ class Trace:
         status: Status | str | None,
         severity: Severity = Severity.INFO,
     ) -> TraceEvent:
+        normalized_operation = self._normalize_operation(operation)
+        normalized_status = self._normalize_status(status)
         normalized_metrics = {
             key: self._normalize_numeric(value)
             for key, value in (metrics or {}).items()
@@ -508,12 +516,12 @@ class Trace:
         }
         return TraceEvent(
             severity=severity,
-            operation=operation,
+            operation=normalized_operation,
             object=object,
             action=action,
             metrics=normalized_metrics,
             details=normalized_details,
-            status=status,
+            status=normalized_status,
             context=self._event_context(),
         )
 
@@ -709,7 +717,12 @@ class _StepScope:
             raise
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> bool:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> Literal[False]:
         if not self._entered:
             raise RuntimeError("step scope is not active")
         duration = (
