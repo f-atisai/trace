@@ -38,42 +38,95 @@ adsl = pd.DataFrame(
 adae = pd.DataFrame(
     {
         "USUBJID": [
-            "STUDY01-001", "STUDY01-001", "STUDY01-002", "STUDY01-003",
-            "STUDY01-004", "STUDY01-005", "STUDY01-005", "STUDY01-006",
-            "STUDY01-006", "STUDY01-007", "STUDY01-008", "STUDY01-008",
+            "STUDY01-001",
+            "STUDY01-001",
+            "STUDY01-002",
+            "STUDY01-003",
+            "STUDY01-004",
+            "STUDY01-005",
+            "STUDY01-005",
+            "STUDY01-006",
+            "STUDY01-006",
+            "STUDY01-007",
+            "STUDY01-008",
+            "STUDY01-008",
         ],
         "TRTEMFL": ["Y", "Y", "N", "Y", "Y", "Y", "Y", "Y", "N", "Y", "Y", "Y"],
         "AEBODSYS": [
-            "Gastrointestinal disorders", "Nervous system disorders",
-            "Nervous system disorders", "Gastrointestinal disorders",
-            "Infections and infestations", "Nervous system disorders",
-            "Gastrointestinal disorders", "Nervous system disorders",
-            "Gastrointestinal disorders", "Infections and infestations",
-            "Nervous system disorders", "Nervous system disorders",
+            "Gastrointestinal disorders",
+            "Nervous system disorders",
+            "Nervous system disorders",
+            "Gastrointestinal disorders",
+            "Infections and infestations",
+            "Nervous system disorders",
+            "Gastrointestinal disorders",
+            "Nervous system disorders",
+            "Gastrointestinal disorders",
+            "Infections and infestations",
+            "Nervous system disorders",
+            "Nervous system disorders",
         ],
         "AEDECOD": [
-            "Nausea", "Headache", "Dizziness", "Nausea", "Nasopharyngitis",
-            "Headache", "Nausea", "Dizziness", "Diarrhoea", "Nasopharyngitis",
-            "Headache", "Dizziness",
+            "Nausea",
+            "Headache",
+            "Dizziness",
+            "Nausea",
+            "Nasopharyngitis",
+            "Headache",
+            "Nausea",
+            "Dizziness",
+            "Diarrhoea",
+            "Nasopharyngitis",
+            "Headache",
+            "Dizziness",
         ],
     }
 )
 
 with Trace("T14_03", study="STUDY01") as trace:
     with trace.step("Safety Population"):
-        trace.read("ADSL", source="analysis/adsl.parquet", rows=len(adsl), columns=len(adsl.columns))
+        trace.read(
+            "ADSL",
+            source="analysis/adsl.parquet",
+            rows=len(adsl),
+            columns=len(adsl.columns),
+        )
         safety = adsl.loc[adsl["SAFFL"] == "Y", ["USUBJID", "TRT01A"]].copy()
-        trace.filter("ADSL", "SAFFL == 'Y'", before=len(adsl), after=len(safety))
+        trace.filter(
+            "ADSL",
+            "SAFFL == 'Y'",
+            result="Safety Population",
+            before=len(adsl),
+            after=len(safety),
+        )
 
     with trace.step("Treatment-emergent adverse events"):
-        trace.read("ADAE", source="analysis/adae.parquet", rows=len(adae), columns=len(adae.columns))
+        trace.read(
+            "ADAE",
+            source="analysis/adae.parquet",
+            rows=len(adae),
+            columns=len(adae.columns),
+        )
         teae = adae.loc[adae["TRTEMFL"] == "Y"].copy()
-        trace.filter("ADAE", "TRTEMFL == 'Y'", before=len(adae), after=len(teae))
+        trace.filter(
+            "ADAE",
+            "TRTEMFL == 'Y'",
+            result="TEAE",
+            before=len(adae),
+            after=len(teae),
+        )
 
     with trace.step("Apply treatment and population"):
-        merged = teae.merge(safety, on="USUBJID", how="inner", validate="many_to_one")
+        merged = teae.merge(
+            safety,
+            on="USUBJID",
+            how="inner",
+            validate="many_to_one",
+        )
         unmatched_subjects = int(
-            teae.loc[~teae["USUBJID"].isin(safety["USUBJID"]), "USUBJID"].nunique()
+            teae.loc[
+                ~teae["USUBJID"].isin(safety["USUBJID"]), "USUBJID"
+            ].nunique()
         )
         trace.merge(
             "ADAE",
