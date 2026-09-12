@@ -16,6 +16,17 @@ def test_render_read():
     assert render_text(event) == "INFO [READ] [ADSL] loaded – N=754, Vars=16"
 
 
+def test_render_check():
+    event = TraceEvent(
+        severity=Severity.INFO,
+        operation=Operation.CHECK,
+        object="ADSL",
+        action="row count observed",
+        metrics={"rows": 754},
+    )
+    assert render_text(event) == "INFO [CHECK] [ADSL] row count observed – rows=754"
+
+
 def test_render_filter():
     event = TraceEvent(
         severity=Severity.INFO,
@@ -28,6 +39,18 @@ def test_render_filter():
     assert render_text(event) == expected
 
 
+def test_render_sort():
+    event = TraceEvent(
+        severity=Severity.INFO,
+        operation=Operation.SORT,
+        object="ADAE",
+        action="sorted",
+        details={"by": ["USUBJID", "AESTDTC"], "ascending": True},
+    )
+    expected = "INFO [SORT] [ADAE] sorted – by=USUBJID,AESTDTC, ascending=True"
+    assert render_text(event) == expected
+
+
 def test_render_derive():
     event = TraceEvent(
         severity=Severity.INFO,
@@ -37,6 +60,21 @@ def test_render_derive():
         details={"dataset": "ADSL", "source": "AGE"},
     )
     expected = "INFO [DERIVE] [AGEGR1] created – dataset=ADSL, source=AGE"
+    assert render_text(event) == expected
+
+
+def test_render_transform():
+    event = TraceEvent(
+        severity=Severity.INFO,
+        operation=Operation.TRANSFORM,
+        object="ADSL",
+        action="treatment labels standardized",
+        details={"source": "TRT01A", "result": "TRT01A"},
+    )
+    expected = (
+        "INFO [TRANSFORM] [ADSL] treatment labels standardized – "
+        "source=TRT01A, result=TRT01A"
+    )
     assert render_text(event) == expected
 
 
@@ -58,6 +96,46 @@ def test_render_merge():
         "INFO [MERGE] [ADAE + ADSL] merged – on=USUBJID, how=left, "
         "result=ADAE_ANALYSIS, left N=4127, right N=754, result N=4127, "
         "matched_subjects=751"
+    )
+    assert render_text(event) == expected
+
+
+def test_render_aggregate():
+    event = TraceEvent(
+        severity=Severity.INFO,
+        operation=Operation.AGGREGATE,
+        object="Safety Population",
+        action="summarized",
+        metrics={"rows": 6},
+        details={
+            "by": ["TRT01A", "AGEGR1"],
+            "result": "summary",
+            "method": "descriptive statistics",
+        },
+    )
+    expected = (
+        "INFO [AGGREGATE] [Safety Population] summarized – by=TRT01A,AGEGR1, "
+        "result=summary, method=descriptive statistics, N=6"
+    )
+    assert render_text(event) == expected
+
+
+def test_render_analyze():
+    event = TraceEvent(
+        severity=Severity.INFO,
+        operation=Operation.ANALYZE,
+        object="Overall survival",
+        action="analyzed",
+        details={
+            "source": "ADTTE",
+            "method": "Kaplan-Meier",
+            "population": "ITT",
+            "result": "km_summary",
+        },
+    )
+    expected = (
+        "INFO [ANALYZE] [Overall survival] analyzed – source=ADTTE, "
+        "method=Kaplan-Meier, population=ITT, result=km_summary"
     )
     assert render_text(event) == expected
 
