@@ -9,7 +9,7 @@ BASE_URL = (
     "analysis/adam/datasets"
 )
 DATA_DIR = Path("data")
-DATASETS = ("adsl.xpt", "adae.xpt", "adtte.xpt")
+DATASETS = ("adsl.xpt", "adae.xpt")
 
 DATA_DIR.mkdir(exist_ok=True)
 
