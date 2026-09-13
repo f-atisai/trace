@@ -42,11 +42,7 @@ dev = [
     "ruff>=0.6",
 ]
 examples = [
-    "lifelines>=0.30",
-    "matplotlib>=3.9",
     "pandas>=2.2",
-    "polars>=1.35",
-    "pyarrow>=18",
     "rtflite>=1.0",
 ]
 
