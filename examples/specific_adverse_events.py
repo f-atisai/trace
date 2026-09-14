@@ -18,6 +18,7 @@ Sources:
 from pathlib import Path
 
 import pandas as pd
+import polars as pl
 import rtflite as rtf
 
 from trace_tlf import Trace
@@ -32,56 +33,57 @@ OUTPUT_PATH = OUTPUT_DIR / "tlf_ae_specific.rtf"
 TREATMENTS = ["Placebo", "Xanomeline Low Dose", "Xanomeline High Dose"]
 
 
-def load_xpt(path: Path) -> pd.DataFrame:
-    """Read a SAS XPORT dataset into a pandas DataFrame."""
-    return pd.read_sas(path, format="xport", encoding="utf-8")
+def load_xpt(path: Path) -> pl.DataFrame:
+    """Read a SAS XPORT dataset and convert it immediately to Polars."""
+    return pl.from_pandas(pd.read_sas(path, format="xport", encoding="utf-8"))
 
 
 def create_ae_by_soc_table(
-    adae_safety: pd.DataFrame,
-    pop_counts: pd.DataFrame,
+    adae_safety: pl.DataFrame,
+    pop_counts: pl.DataFrame,
     treatments: list[str],
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     """Reproduce the public PyCSR SOC/preferred-term table workflow."""
-    analysis_data = adae_safety.copy()
-    analysis_data["AEDECOD_STD"] = analysis_data["AEDECOD"].str.title()
-    analysis_data["AEBODSYS_STD"] = analysis_data["AEBODSYS"].str.title()
-
     ae_counts = (
-        analysis_data.groupby(
-            ["TRT01A", "AEBODSYS_STD", "AEDECOD_STD"], dropna=False
-        )["USUBJID"]
-        .nunique()
-        .reset_index(name="n")
-        .sort_values(["AEBODSYS_STD", "AEDECOD_STD", "TRT01A"])
+        adae_safety.with_columns(
+            [
+                pl.col("AEDECOD").str.to_titlecase().alias("AEDECOD_STD"),
+                pl.col("AEBODSYS").str.to_titlecase().alias("AEBODSYS_STD"),
+            ]
+        )
+        .group_by(["TRT01A", "AEBODSYS_STD", "AEDECOD_STD"])
+        .agg(n=pl.col("USUBJID").n_unique())
+        .sort(["AEBODSYS_STD", "AEDECOD_STD", "TRT01A"])
     )
 
-    population_by_treatment = pop_counts.set_index("TRT01A")["N"].to_dict()
     table_data = [
         ["Participants in population"]
-        + [str(population_by_treatment.get(treatment, 0)) for treatment in treatments],
+        + [
+            str(pop_counts.filter(pl.col("TRT01A") == treatment)["N"][0])
+            for treatment in treatments
+        ],
         [""] * (len(treatments) + 1),
     ]
 
-    for soc in sorted(ae_counts["AEBODSYS_STD"].dropna().unique()):
+    for soc in ae_counts["AEBODSYS_STD"].unique().sort():
         table_data.append([soc] + [""] * len(treatments))
-        soc_data = ae_counts.loc[ae_counts["AEBODSYS_STD"] == soc]
+        soc_data = ae_counts.filter(pl.col("AEBODSYS_STD") == soc)
 
-        for ae_term in sorted(soc_data["AEDECOD_STD"].dropna().unique()):
+        for ae_term in soc_data["AEDECOD_STD"].unique().sort():
             row = [f"  {ae_term}"]
             for treatment in treatments:
-                count_data = soc_data.loc[
-                    (soc_data["AEDECOD_STD"] == ae_term)
-                    & (soc_data["TRT01A"] == treatment),
-                    "n",
-                ]
-                count = int(count_data.iloc[0]) if not count_data.empty else 0
+                count_data = soc_data.filter(
+                    (pl.col("AEDECOD_STD") == ae_term)
+                    & (pl.col("TRT01A") == treatment)
+                )
+                count = count_data["n"][0] if count_data.height > 0 else 0
                 row.append(str(count))
             table_data.append(row)
 
-    return pd.DataFrame(
+    return pl.DataFrame(
         table_data,
-        columns=["System Organ Class / Preferred Term", *treatments],
+        schema=["System Organ Class / Preferred Term"] + treatments,
+        orient="row",
     )
 
 
@@ -91,52 +93,49 @@ with Trace("TLF_AE_SPECIFIC", study="CDISC Pilot") as trace:
         trace.read(
             "ADSL",
             source=str(ADSL_PATH),
-            rows=len(adsl),
-            columns=len(adsl.columns),
+            rows=adsl.height,
+            columns=adsl.width,
         )
 
         adae = load_xpt(ADAE_PATH)
         trace.read(
             "ADAE",
             source=str(ADAE_PATH),
-            rows=len(adae),
-            columns=len(adae.columns),
+            rows=adae.height,
+            columns=adae.width,
         )
 
     with trace.step("Prepare safety population"):
-        adsl_safety = adsl.loc[adsl["SAFFL"] == "Y", ["USUBJID", "TRT01A"]].copy()
+        adsl_safety = adsl.filter(pl.col("SAFFL") == "Y").select(
+            ["USUBJID", "TRT01A"]
+        )
         trace.filter(
             "ADSL",
             "SAFFL == 'Y'",
             result="Safety Population",
-            before=len(adsl),
-            after=len(adsl_safety),
+            before=adsl.height,
+            after=adsl_safety.height,
         )
 
-        pop_counts = (
-            adsl_safety.groupby("TRT01A", dropna=False)
-            .size()
-            .reset_index(name="N")
-            .sort_values("TRT01A")
-        )
+        pop_counts = adsl_safety.group_by("TRT01A").agg(N=pl.len()).sort("TRT01A")
         trace.aggregate(
             "Safety Population",
             by=["TRT01A"],
             result="safety_population_counts",
             method="participant count",
-            rows=len(pop_counts),
+            rows=pop_counts.height,
         )
 
-        adae_safety = adae.merge(adsl_safety, on="USUBJID", how="inner")
+        adae_safety = adae.join(adsl_safety, on="USUBJID", how="inner")
         trace.merge(
             "ADAE",
             "Safety Population",
             on=["USUBJID"],
             how="inner",
             result="Safety ADAE",
-            left_rows=len(adae),
-            right_rows=len(adsl_safety),
-            result_rows=len(adae_safety),
+            left_rows=adae.height,
+            right_rows=adsl_safety.height,
+            result_rows=adae_safety.height,
         )
 
     with trace.step("Summarize adverse events"):
@@ -146,16 +145,16 @@ with Trace("TLF_AE_SPECIFIC", study="CDISC Pilot") as trace:
             by=["AEBODSYS", "AEDECOD", "TRT01A"],
             result="ae_soc_pt_table",
             method="unique participant incidence",
-            rows=len(df_ae_specific),
+            rows=df_ae_specific.height,
         )
         trace.validate(
             "ae_soc_pt_table",
             "contains the population row and all treatment columns",
             passed=(
-                len(df_ae_specific) > 0
+                df_ae_specific.height > 0
                 and all(treatment in df_ae_specific.columns for treatment in TREATMENTS)
             ),
-            metrics={"rows": len(df_ae_specific)},
+            metrics={"rows": df_ae_specific.height},
         )
 
     with trace.step("Write RTF output"):
@@ -196,5 +195,5 @@ with Trace("TLF_AE_SPECIFIC", study="CDISC Pilot") as trace:
             "TLF_AE_SPECIFIC",
             OUTPUT_PATH,
             format="rtf",
-            rows=len(df_ae_specific),
+            rows=df_ae_specific.height,
         )
