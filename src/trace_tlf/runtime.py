@@ -14,8 +14,8 @@ from .event import TraceEvent
 from .operations import Operation
 from .provenance import ExecutionProvenance, render_provenance
 from .rendering import render_text
-from .trace import Trace as _CoreTrace
 from .trace import _LEVELS
+from .trace import Trace as _CoreTrace
 
 
 class Trace(_CoreTrace):
@@ -101,6 +101,12 @@ class Trace(_CoreTrace):
             with spool_path.open("a", encoding="utf-8") as spool:
                 spool.write(text)
                 spool.write("\n")
+            return
+
+        # Simple, non-context TRACE usage retains the alpha behavior of
+        # writing log_file immediately. Managed runs use the spool above so
+        # the completed review log can be finalized with provenance first.
+        self._write_direct_log(text)
 
     def _build_logger(self) -> logging.Logger:
         logger_name = f"trace_tlf.{self.program}.{self.run_id}"
@@ -114,6 +120,14 @@ class Trace(_CoreTrace):
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
         return logger
+
+    def _write_direct_log(self, text: str) -> None:
+        if self.log_file is None:
+            return
+        self.log_file.parent.mkdir(parents=True, exist_ok=True)
+        with self.log_file.open("a", encoding="utf-8") as log:
+            log.write(text)
+            log.write("\n")
 
     def _start_spool(self) -> None:
         if getattr(self, "_spool_path", None) is not None:
@@ -180,7 +194,6 @@ class Trace(_CoreTrace):
                 os.fsync(staging.fileno())
 
             os.replace(staging_path, self.log_file)
-            staging_path = None
             spool_path.unlink()
             self._spool_path = None
         finally:
