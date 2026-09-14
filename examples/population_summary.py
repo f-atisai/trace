@@ -17,6 +17,7 @@ Sources:
 from pathlib import Path
 
 import pandas as pd
+import polars as pl
 import rtflite as rtf
 
 from trace_tlf import Trace
@@ -29,19 +30,21 @@ ADSL_PATH = DATA_DIR / "adsl.xpt"
 OUTPUT_PATH = OUTPUT_DIR / "tlf_population.rtf"
 
 
-def load_xpt(path: Path) -> pd.DataFrame:
-    """Read a SAS XPORT dataset into a pandas DataFrame."""
-    return pd.read_sas(path, format="xport", encoding="utf-8")
+def load_xpt(path: Path) -> pl.DataFrame:
+    """Read a SAS XPORT dataset and convert it immediately to Polars."""
+    return pl.from_pandas(pd.read_sas(path, format="xport", encoding="utf-8"))
 
 
-def count_by_treatment(data: pd.DataFrame, population_name: str) -> pd.DataFrame:
+def count_by_treatment(data: pl.DataFrame, population_name: str) -> pl.DataFrame:
     """Count participants by treatment and attach a population label."""
-    counts = data.groupby("TRT01P", dropna=False).size().reset_index(name="n")
-    counts["population"] = population_name
-    return counts
+    return (
+        data.group_by("TRT01P")
+        .agg(n=pl.len())
+        .with_columns(population=pl.lit(population_name))
+    )
 
 
-def create_population_summary(adsl: pd.DataFrame) -> pd.DataFrame:
+def create_population_summary(adsl: pl.DataFrame) -> pl.DataFrame:
     """Reproduce the public PyCSR population-summary workflow."""
     populations = [count_by_treatment(adsl, "Participants in population")]
 
@@ -51,57 +54,49 @@ def create_population_summary(adsl: pd.DataFrame) -> pd.DataFrame:
         ("SAFFL", "Participants included in safety population"),
     ):
         if flag in adsl.columns:
-            population = adsl.loc[adsl[flag] == "Y"].copy()
+            population = adsl.filter(pl.col(flag) == "Y")
             populations.append(count_by_treatment(population, label))
 
-    return pd.concat(populations, ignore_index=True)
+    return pl.concat(populations, how="diagonal")
 
 
 def format_population_table(
-    pop_summary: pd.DataFrame,
-    totals: pd.DataFrame,
-) -> pd.DataFrame:
+    pop_summary: pl.DataFrame,
+    totals: pl.DataFrame,
+) -> pl.DataFrame:
     """Format population counts and percentages as in the PyCSR example."""
-    stats_with_pct = pop_summary.merge(totals, on="TRT01P", how="left")
-    stats_with_pct["pct"] = (
-        100.0 * stats_with_pct["n"] / stats_with_pct["total"]
-    ).round(1)
-
-    is_total = stats_with_pct["population"] == "Participants in population"
-    stats_with_pct["display"] = stats_with_pct["n"].astype(str)
-    stats_with_pct.loc[~is_total, "display"] = (
-        stats_with_pct.loc[~is_total, "n"].astype(str)
-        + " ("
-        + stats_with_pct.loc[~is_total, "pct"].map(lambda value: f"{value:.1f}")
-        + ")"
+    stats_with_pct = pop_summary.join(totals, on="TRT01P").with_columns(
+        pct=(100.0 * pl.col("n") / pl.col("total")).round(1)
     )
 
-    table = stats_with_pct.pivot(
-        index="population",
-        columns="TRT01P",
+    formatted_stats = stats_with_pct.with_columns(
+        display=pl.when(pl.col("population") == "Participants in population")
+        .then(pl.col("n").cast(str))
+        .otherwise(
+            pl.concat_str(
+                [
+                    pl.col("n").cast(str),
+                    pl.lit(" ("),
+                    pl.col("pct").round(1).cast(str),
+                    pl.lit(")"),
+                ]
+            )
+        )
+    )
+
+    return formatted_stats.pivot(
         values="display",
-    ).reset_index()
-
-    population_order = [
-        "Participants in population",
-        "Participants included in ITT population",
-        "Participants included in efficacy population",
-        "Participants included in safety population",
-    ]
-    table["population"] = pd.Categorical(
-        table["population"], categories=population_order, ordered=True
-    )
-    table = table.sort_values("population").reset_index(drop=True)
-    table["population"] = table["population"].astype(str)
-
-    return table[
+        index="population",
+        on="TRT01P",
+        maintain_order=True,
+    ).select(
         [
             "population",
             "Placebo",
             "Xanomeline Low Dose",
             "Xanomeline High Dose",
         ]
-    ]
+    )
 
 
 with Trace("TLF_POPULATION", study="CDISC Pilot") as trace:
@@ -110,25 +105,25 @@ with Trace("TLF_POPULATION", study="CDISC Pilot") as trace:
         trace.read(
             "ADSL",
             source=str(ADSL_PATH),
-            rows=len(adsl),
-            columns=len(adsl.columns),
+            rows=adsl.height,
+            columns=adsl.width,
         )
 
     with trace.step("Summarize analysis populations"):
-        totals = adsl.groupby("TRT01P", dropna=False).size().reset_index(name="total")
+        totals = adsl.group_by("TRT01P").agg(total=pl.len())
 
         for flag, result in (
             ("ITTFL", "ITT Population"),
             ("EFFFL", "Efficacy Population"),
             ("SAFFL", "Safety Population"),
         ):
-            selected = adsl.loc[adsl[flag] == "Y"].copy()
+            selected = adsl.filter(pl.col(flag) == "Y")
             trace.filter(
                 "ADSL",
                 f"{flag} == 'Y'",
                 result=result,
-                before=len(adsl),
-                after=len(selected),
+                before=adsl.height,
+                after=selected.height,
             )
 
         pop_summary = create_population_summary(adsl)
@@ -137,7 +132,7 @@ with Trace("TLF_POPULATION", study="CDISC Pilot") as trace:
             by=["TRT01P", "analysis population"],
             result="population_summary",
             method="participant count",
-            rows=len(pop_summary),
+            rows=pop_summary.height,
         )
 
     with trace.step("Format population table"):
@@ -150,8 +145,8 @@ with Trace("TLF_POPULATION", study="CDISC Pilot") as trace:
         trace.validate(
             "population_table",
             "contains one row for each planned analysis-population display",
-            passed=len(df_overview) == 4,
-            metrics={"rows": len(df_overview)},
+            passed=df_overview.height == 4,
+            metrics={"rows": df_overview.height},
         )
 
     with trace.step("Write RTF output"):
@@ -177,4 +172,9 @@ with Trace("TLF_POPULATION", study="CDISC Pilot") as trace:
             rtf_source=rtf.RTFSource(text=["Source: CDISC Pilot Study ADSL"]),
         )
         doc_overview.write_rtf(OUTPUT_PATH)
-        trace.output("TLF_POPULATION", OUTPUT_PATH, format="rtf", rows=len(df_overview))
+        trace.output(
+            "TLF_POPULATION",
+            OUTPUT_PATH,
+            format="rtf",
+            rows=df_overview.height,
+        )
