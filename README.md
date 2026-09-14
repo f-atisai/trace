@@ -1,143 +1,192 @@
 # TRACE
 
-**TRACE — Transparent Reporting and Auditable Code Execution**
+**Transparent Reporting and Auditable Code Execution**
 
-TRACE is an open-source **semantic execution evidence framework for statistical programming**, with a Python implementation for recording concise, reviewable execution logs.
+TRACE is a **semantic execution evidence framework for statistical programming**. It helps programmers and reviewers see what a statistical program actually did: what data it read, how populations changed, what derivations and analyses ran, what was validated, and which outputs were produced.
 
-It helps reviewers and programmers understand what a statistical program actually did by recording semantic events and execution evidence alongside the program and its outputs. TRACE uses structured logging as an implementation mechanism; it is not intended to be another general-purpose wrapper around Python `logging`.
+TRACE uses structured logging as a mechanism, but it is not a general-purpose logging wrapper.
 
-> **Developer Preview status:** TRACE is preparing for `v0.1.0-alpha`. The documented alpha API is intentionally small and is intended for experimentation and feedback from statistical programmers. APIs may change before v1.0.
+## See it in 60 seconds
 
-## Goals
-
-TRACE is designed to make execution evidence easy to add without requiring programmers to construct repetitive messages or work directly with logging configuration.
-
-The design focuses on:
-
-- a controlled statistical-programming vocabulary;
-- semantic events such as READ, FILTER, DERIVE, MERGE, ANALYZE, VALIDATE, and OUTPUT;
-- structured diagnostics whose origin can distinguish what TRACE observed, what the program supplied, and what TRACE derived;
-- program-level execution provenance that connects a run to its physical input and output artifacts;
-- lifecycle and step instrumentation; and
-- concise, review-ready output.
-
-Example direction:
+A statistical program keeps ownership of the analysis. TRACE records the meaningful execution evidence around it.
 
 ```python
 from trace_tlf import Trace
 
 with Trace("T14_01") as trace:
-    trace.read(
-        "ADSL",
-        source="analysis/adsl.parquet",
-        rows=254,
-        columns=16,
-    )
-
     with trace.step("Analysis population"):
+        safety = adsl.query("SAFFL == 'Y'")
+
         trace.filter(
             "ADSL",
             "SAFFL == 'Y'",
-            result="Safety Population",
-            before=254,
-            after=249,
+            before=len(adsl),
+            after=len(safety),
         )
-
-    trace.derive("AGEGR1", dataset="ADSL", source="AGE")
-    trace.aggregate(
-        "Safety Population",
-        by=["TRT01A", "SEX", "AGEGR1"],
-        result="demographics_summary",
-    )
-    trace.output("T14_01", "outputs/T14_01.rtf")
 ```
+
+TRACE produces concise semantic events while the program runs:
 
 ```text
-INFO [START]     [T14_01] execution started
-INFO [READ]      [ADSL] loaded – N=254, Vars=16
-INFO [STEP]      [Analysis population] started
-INFO [FILTER]    [ADSL] SAFFL == 'Y' applied – N=254 → 249
-INFO [STEP]      [Analysis population] completed – 0.031s
-INFO [DERIVE]    [AGEGR1] created – dataset=ADSL, source=AGE
-INFO [AGGREGATE] [Safety Population] summarized – by=TRT01A,SEX,AGEGR1
-INFO [OUTPUT]    [T14_01] written – outputs/T14_01.rtf
-INFO [END]       [T14_01] execution completed – 0.071s
+INFO [START]  [T14_01] execution started
+INFO [STEP]   [Analysis population] started
+INFO [FILTER] [ADSL] SAFFL == 'Y' applied – N=754 → 720
+INFO [STEP]   [Analysis population] completed – 0.031s
+INFO [END]    [T14_01] execution completed – 0.034s
 ```
 
-`result="Safety Population"` preserves the analytical result identity while `ADSL` remains the object that was filtered.
+With `log_file` configured, the final review log also records program-level execution provenance before the semantic event stream:
 
-In TRACE Core, values such as `rows=254` or `before=254` are supplied by the calling program unless an integration inspected runtime state directly. TRACE's evidence model distinguishes **observed**, **supplied**, and **derived** diagnostics.
+```text
+TRACE EXECUTION
 
-TRACE is a review companion to the statistical program and its outputs. A clean TRACE execution does **not** establish that an analysis is statistically correct or replace specification review, code review, output review, or independent QC. A validation `PASS` means only that the implemented criterion evaluated successfully.
+Program:  T14_01
+Run ID:   7eab...
+Executed: 2026-09-14T14:32:18Z
 
-## Framework and Python implementation
+Input artifacts:
+  data/adsl.xpt
 
-- **TRACE Framework** defines the statistical-programming semantics and methodology for reviewable execution evidence.
-- **TRACE for Python** implements the framework for Python statistical programs using structured logging infrastructure.
+Output artifacts:
+  outputs/tlf_population.rtf
 
-Keeping the framework distinct from the implementation leaves room for future implementations in other languages.
-
-TRACE Core remains backend-independent. Optional integrations may later inspect pandas, Polars, PyArrow, or other runtime objects to collect observed diagnostics without changing operation semantics.
-
-## Alpha public API
-
-The supported top-level import is intentionally small:
-
-```python
-from trace_tlf import Trace
+INFO [START] [T14_01] execution started
+...
+INFO [END] [T14_01] execution completed – 0.84s
 ```
 
-All eleven semantic helpers plus context-managed lifecycle and `trace.step()` are alpha public. `trace.log()` remains a supported advanced escape hatch rather than the normal programming style. Domain-model classes, renderers, logger internals, and event factories are not part of the alpha compatibility contract.
+The compact model is:
 
-See [`docs/api/`](docs/api/) for the complete developer-preview boundary.
-
-## Documentation
-
-- [`docs/framework/`](docs/framework/) — normative TRACE framework specifications and reviewer workflow.
-- [`docs/api/`](docs/api/) — public Python alpha API contract.
-- [`docs/guides/`](docs/guides/) — task-oriented guidance, including optional Quarto use.
-- [`docs/design/`](docs/design/) — governing design specifications, research, prototype findings, and architecture history.
-- [`docs/examples/`](docs/examples/) — reviewer-oriented execution examples.
-
-The design documentation index explains which document is authoritative for each concept.
-
-## Package naming
-
-The project is branded **TRACE**, while the Python import package uses `trace_tlf` to avoid conflict with Python's standard-library `trace` module:
-
-```python
-from trace_tlf import Trace
+```text
+Semantic events
+      +
+Execution diagnostics
+      +
+Program-level provenance
+      =
+Reviewable execution evidence
 ```
 
-The intended distribution name is `trace-tlf`, subject to final package-name review before publication.
+That evidence helps answer reviewer questions such as: Which data entered the run? Which population was selected? Where did counts change? How were datasets combined? Which checks passed or failed? What output artifact was produced?
 
-## Installation
+TRACE is a review companion to the program, specification, output, and QC process. A clean TRACE run does **not** prove statistical correctness, and `VALIDATE PASS` means only that the implemented criterion passed.
 
-TRACE is not yet published on PyPI. The planned developer preview will use:
+## Try TRACE
 
-```bash
-pip install trace-tlf
-```
-
-For repository development:
+TRACE currently targets Python 3.10+ and the Developer Preview is being developed directly from this repository.
 
 ```bash
 git clone https://github.com/f-atisai/trace.git
 cd trace
-python -m pip install -e ".[dev]"
+python -m pip install -e .
 ```
 
-Run checks with:
+Then:
+
+```python
+from trace_tlf import Trace
+
+with Trace("T14_01") as trace:
+    trace.read("ADSL", source="data/adsl.xpt", rows=254, columns=48)
+
+    safety = adsl.query("SAFFL == 'Y'")
+    trace.filter("ADSL", "SAFFL == 'Y'", before=len(adsl), after=len(safety))
+
+    trace.output("T14_01", "outputs/tlf_population.rtf")
+```
+
+For a finalized provenance-first review log:
+
+```python
+with Trace("T14_01", log_file="logs/T14_01.log") as trace:
+    ...
+```
+
+## Core concepts
+
+TRACE deliberately uses a small statistical-programming vocabulary. The canonical semantic operations are:
+
+```text
+READ  CHECK  FILTER  SORT  DERIVE  TRANSFORM
+MERGE  AGGREGATE  ANALYZE  VALIDATE  OUTPUT
+```
+
+`START`, `END`, and `STEP` describe execution lifecycle and logical scopes rather than statistical operations.
+
+TRACE Core does not own or wrap the statistical transformation itself. Code such as pandas or Polars performs the work; TRACE records the execution evidence after meaningful operations.
+
+Diagnostics can represent evidence that was **supplied** by the program, **observed** by an integration, or **derived** by TRACE. The current Core API primarily records programmer-supplied diagnostics while remaining backend-independent.
+
+## Real statistical-programming examples
+
+The flagship examples use the public **CDISC Pilot Study** ADaM datasets and recognizable clinical-reporting workflows:
+
+- [`examples/population_summary.py`](examples/population_summary.py) — analysis-population summary, including population attrition, treatment summaries, validation, and RTF output.
+- [`examples/specific_adverse_events.py`](examples/specific_adverse_events.py) — adverse events by SOC and preferred term, including safety-set selection, dataset merging, and subject incidence.
+
+Run them with:
 
 ```bash
-pytest
-ruff check .
-mypy src
+python -m pip install -e ".[examples]"
+python examples/fetch_example_data.py
+python examples/population_summary.py
+python examples/specific_adverse_events.py
 ```
+
+See [`examples/README.md`](examples/README.md) for data provenance, workflow references, and reviewer guidance.
+
+## Framework vs Python implementation
+
+**TRACE Framework** defines the semantic execution-evidence model and statistical-programming conventions.
+
+**TRACE for Python** is the Python implementation of that framework. The distribution name is `trace-tlf` and the import package is `trace_tlf`:
+
+```python
+from trace_tlf import Trace
+```
+
+Keeping the framework separate from the implementation leaves room for future implementations and integrations without changing the core semantics.
+
+## Developer Preview status
+
+TRACE is in active development toward **v0.1.0-alpha — Developer Preview**. The current package version is `0.1.0a1`.
+
+The alpha is intended for experimentation and feedback from experienced statistical programmers. The public surface is intentionally small and may change before v1.0 as real-world use exposes API friction.
+
+The supported top-level import is:
+
+```python
+from trace_tlf import Trace
+```
+
+The alpha public API includes the Tier 1 semantic helpers, context-managed lifecycle, `trace.step()`, and the advanced `trace.log()` escape hatch. Domain-model classes, renderers, provenance internals, and sink implementation details are not part of the public compatibility contract.
+
+See [`docs/api/`](docs/api/) for the authoritative Developer Preview API boundary.
+
+## Documentation
+
+Use the documentation by purpose rather than reading it front to back:
+
+- [`docs/framework/`](docs/framework/) — TRACE semantics, vocabulary, and reviewer workflow.
+- [`docs/api/`](docs/api/) — public Python API.
+- [`docs/guides/`](docs/guides/) — task-oriented guidance, including Quarto use.
+- [`docs/examples/`](docs/examples/) — reviewer-oriented execution examples.
+- [`docs/design/`](docs/design/) — governing design decisions and architecture history.
+
+The README is intentionally a product introduction rather than the architecture specification.
 
 ## Contributing
 
-Contributions, API-design discussion, statistical-programming use cases, and implementation feedback are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+API-design discussion, statistical-programming use cases, bug reports, and implementation contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+
+For repository development:
+
+```bash
+python -m pip install -e ".[dev]"
+ruff check .
+pytest
+mypy src
+```
 
 ## License
 
