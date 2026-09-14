@@ -1,317 +1,174 @@
 # TRACE Execution Provenance
 
-**Phase:** 10.5 — Define Minimal Execution Provenance  
-**Status:** Accepted design specification  
+**Phase:** 10.5 / Developer Preview implementation  
+**Status:** Phase 1 implemented  
 **Scope:** Program-level execution identity and physical input/output artifact provenance
 
 ## 1. Purpose
 
 TRACE provenance identifies **which program execution and physical artifacts the recorded execution evidence belongs to**.
 
-It is deliberately minimal. TRACE is not an environment-capture, system-inventory, or reproducibility fingerprinting tool.
+Provenance is program-level. It is not repeated on ordinary semantic events, and it must not require TRACE to delay live event output.
 
-The provenance model is:
+The Developer Preview model is:
 
 ```text
 Execution provenance
 ├── program
 ├── run_id
-├── started_at
-├── ended_at
+├── executed
 ├── input_artifacts
-│   ├── path
-│   └── sha256 (optional)
 └── output_artifacts
-    ├── path
-    └── sha256 (optional)
 ```
 
-Provenance is recorded at **program level**. It must not be repeated on ordinary semantic events.
+Artifact hashing and environment fingerprinting are outside the current alpha implementation.
 
 ## 2. Execution identity
 
-### Program
+`program` identifies the statistical program. The existing `run_id` uniquely identifies one TRACE execution; provenance does not introduce a second run identifier.
 
-`program` identifies the statistical program being executed.
-
-Examples:
-
-```text
-T14_01
-tlf_population.py
-analysis/tlf-04-efficacy-ancova.qmd
-```
-
-TRACE does not prescribe whether a project uses a logical program identifier, filename, or document path. The value should be stable and meaningful to a reviewer.
-
-### Run ID
-
-`run_id` uniquely identifies one TRACE execution.
-
-The run ID distinguishes repeated executions of the same program and allows semantic events, diagnostics, and artifact provenance to be associated with the same run.
-
-The existing TRACE run ID remains the execution identifier; Phase 10.5 does not introduce a second provenance-specific identifier.
-
-## 3. Execution timestamps
-
-TRACE records execution time in UTC using ISO 8601.
-
-Canonical form:
+`executed` is recorded in UTC ISO 8601 form when a managed TRACE run begins:
 
 ```text
 2026-09-12T14:32:18Z
 ```
 
-The provenance model uses:
+A single execution timestamp is intentionally used in the concise reviewer-facing summary. Event durations remain lifecycle diagnostics rather than provenance fields.
+
+## 3. Artifact provenance
+
+An input artifact is an external physical artifact consumed by the run. An output artifact is an external physical artifact produced by the run.
+
+For the Developer Preview:
+
+- `trace.read(..., source=...)` registers `source` as an input artifact during a managed run;
+- `trace.output(..., path=...)` registers `path` as an output artifact during a managed run;
+- first-seen order is preserved;
+- duplicate paths are listed once;
+- registration does not change READ or OUTPUT event rendering.
+
+READ/OUTPUT events and provenance remain distinct:
 
 ```text
-started_at
-ended_at
+READ event             what input object became available
+input provenance       which physical artifact participated
+
+OUTPUT event           what production action occurred
+output provenance      which physical artifact was produced
 ```
 
-Both belong to the program run rather than individual semantic events.
+## 4. Streaming and final-log architecture
 
-`started_at` records when TRACE execution began. `ended_at` records when execution ended, including failed executions where lifecycle handling reaches termination.
-
-Event-level timestamps are a separate concern and are not required by the minimal provenance model.
-
-### Timestamp rules
-
-- use UTC;
-- serialize in ISO 8601 form;
-- prefer `Z` for UTC output;
-- retain sufficient precision for execution identification without requiring sub-second precision in the human-readable rendering;
-- do not convert provenance timestamps to local time in the canonical structured representation.
-
-A renderer may present local time additionally in the future, but UTC remains the canonical provenance value.
-
-## 4. Input artifacts
-
-An **input artifact** is an external physical artifact actually consumed by the program during the execution.
-
-Examples:
+TRACE has two output responsibilities:
 
 ```text
-data/adsl.parquet
-data/adae.parquet
-specifications/tlf_shell.xlsx
+live console output    what is happening now
+final TRACE log        what happened in this run
 ```
 
-An input artifact is not simply every file that exists in the project or every object mentioned by the program.
+Semantic events continue to stream immediately. TRACE does not hold the full event stream in memory.
 
-The minimum representation is:
+When `log_file` is configured, each rendered event is also appended to an internal file-backed event spool:
 
 ```text
-path
+TraceEvent
+   │
+   ├──► live console
+   └──► temporary event spool
 ```
 
-An optional hash may be added:
+At successful managed-run completion, TRACE:
 
-```text
-path=data/adsl.parquet
-sha256=8f31...
-```
+1. emits END through the normal live path;
+2. finalizes the program-level provenance summary;
+3. creates a staging file containing provenance, a blank line, and the event spool;
+4. atomically publishes the staging file to `log_file`;
+5. removes the completed event spool.
 
-### READ is not provenance
-
-A `READ` event and input-artifact provenance are related but distinct.
-
-```text
-READ event
-    answers: What input object became available to the analysis?
-
-input artifact provenance
-    answers: Which physical artifact participated in this execution?
-```
-
-For example:
-
-```text
-Input artifact: data/adsl.parquet
-READ event:     [READ] [ADSL] loaded
-```
-
-The artifact path must not be repeated on every semantic event merely because that data contributed downstream.
-
-## 5. Output artifacts
-
-An **output artifact** is an external physical artifact actually produced by the execution.
-
-Examples:
-
-```text
-rtf/t14-2-01.rtf
-output/tlf_population.rtf
-adam/adae.xpt
-```
-
-The minimum representation is:
-
-```text
-path
-```
-
-An optional hash may be added:
-
-```text
-path=rtf/t14-2-01.rtf
-sha256=a791...
-```
-
-An `OUTPUT` semantic event records that the program produced an output. Program-level output provenance identifies the resulting physical artifact associated with the run. The two concepts must not be collapsed merely because they commonly refer to the same file.
-
-## 6. Artifact hashing
-
-Hashes are optional and exist to answer:
-
-> **Is the artifact being reviewed the same physical artifact that participated in this execution?**
-
-When hashing is used, TRACE uses **SHA-256**.
-
-### Hashing rules
-
-- hash the artifact bytes;
-- do not hash arbitrary in-memory DataFrames or model objects as part of minimal provenance;
-- do not define a semantic-dataframe hash that depends on row ordering, serialization choices, type coercion, or backend behavior;
-- do not store artifact contents;
-- do not require hashing for basic TRACE adoption;
-- do not automatically hash very large artifacts without an explicit implementation policy;
-- a missing hash means only that TRACE did not record one, not that the artifact is untrusted or invalid.
-
-Artifact hashing is identity evidence, not proof of analytical correctness or file quality.
-
-## 7. Program-level rendering
-
-A concise reviewer-facing representation may be:
+The resulting review log is:
 
 ```text
 TRACE EXECUTION
 
-Program:  tlf_population.py
+Program:  T14_01
 Run ID:   7eab...
-Started:  2026-09-12T14:32:18Z
-Ended:    2026-09-12T14:32:19Z
+Executed: 2026-09-12T14:32:18Z
 
 Input artifacts:
-  data/adsl.parquet
-  sha256: 8f31...
+  data/adsl.xpt
 
 Output artifacts:
-  rtf/tlf_population.rtf
-  sha256: a791...
+  outputs/tlf_population.rtf
+
+INFO [START] [T14_01] execution started
+INFO [READ] [ADSL] loaded – source=data/adsl.xpt
+...
+INFO [END] [T14_01] execution completed – 0.84s
 ```
 
-With multiple artifacts:
+The semantic event text in the final log is the same rendered text that was streamed live.
+
+## 5. `log_file` semantics
+
+`log_file` identifies the finalized provenance-first TRACE review log for a managed run.
+
+Temporary spool and staging files are internal implementation details. TRACE does not expose them through the public API.
+
+Without `log_file`, TRACE remains a live console tool and does not silently create a persistent provenance log.
+
+## 6. Structured events remain authoritative
+
+The event path remains:
 
 ```text
-Input artifacts:
-  data/adsl.parquet
-    sha256: 8f31...
-  data/adae.parquet
-    sha256: 73ad...
-
-Output artifacts:
-  rtf/t14-2-01.rtf
-    sha256: a791...
-  listings/l14-2-01.rtf
+statistical program
+       ↓
+TraceEvent
+       ↓
+renderer
+       ↓
+text event
+       ├──► console
+       └──► event spool
 ```
 
-The provenance block should appear once for the execution. Ordinary TRACE events remain focused on semantic activity and diagnostics.
+`TraceEvent` remains the source of semantic truth. The spool stores the rendered review representation only so the final human-readable log can be assembled after execution.
 
-## 8. Structured model
+## 7. Current scope boundaries
 
-Phase 10.5 defines the conceptual structure without freezing the public Python API or storage class.
-
-A structured representation should be able to express:
+The Developer Preview provenance implementation does not include:
 
 ```text
-program: string
-run_id: string
-started_at: UTC timestamp
-ended_at: UTC timestamp | null
-input_artifacts: sequence of artifacts
-output_artifacts: sequence of artifacts
-```
-
-where an artifact contains:
-
-```text
-path: string
-sha256: string | null
-```
-
-`ended_at` may be absent while a run is active. How and when artifacts are registered, finalized, or rendered belongs to implementation design.
-
-## 9. Scope boundaries
-
-Minimal provenance does **not** include:
-
-```text
-Git commit
-Git branch or dirty state
-Python version
-package versions
-operating system
-hostname
-username
-machine identity
-CPU / memory information
-container image
-full environment variables
-working-directory snapshots
+artifact hashes
+hash_artifacts constructor option
+Git commit or branch
+Python/package versions
+operating system or machine identity
+environment variables
 source-code copies
 artifact contents
+automatic incomplete-run recovery
+public sink or spool APIs
 ```
 
-These may be reconsidered only if a demonstrated review or reproducibility requirement justifies the added complexity, privacy risk, and output noise.
+Artifact hashing remains a post-alpha API discussion and must not change the current constructor during the Developer Preview.
 
-TRACE should not collect broad environment data simply because it is technically available.
+## 8. Phase 1 decisions
 
-## 10. Relationship to execution evidence
+- Semantic TRACE events remain live-streaming.
+- No full-run semantic event buffer is kept in memory.
+- Provenance remains program-level.
+- `READ source` and `OUTPUT path` register physical artifacts during managed runs.
+- Artifact paths preserve first-seen order and are deduplicated.
+- `log_file` represents the finalized review artifact.
+- The final log places provenance before semantic events.
+- Final logs are assembled through a staging file and atomic replacement.
+- No persistent provenance file is created when `log_file` is absent.
+- The public `Trace` constructor remains unchanged.
+- Hashing and failure-hardening behavior are deferred.
 
-Execution provenance is one of three complementary evidence forms:
+## 9. Phase 2 boundary
 
-```text
-semantic events       what happened
-observed diagnostics  what measurable evidence describes it
-execution provenance  which run and artifacts the evidence belongs to
-```
+Phase 2 will harden normal-exception finalization, finalization failures, spool preservation, cleanup guarantees, repeated destination replacement, and the rule that TRACE failures must not mask an active program exception.
 
-Provenance does not change the meaning of a semantic event and must not be injected repeatedly into event details.
-
-The reviewer model and diagnostic-evidence rules are defined in [`reviewer-experience.md`](reviewer-experience.md).
-
-## 11. Phase 10.5 decisions
-
-- Execution provenance is program-level, not event-level.
-- `program` and the existing `run_id` identify the execution.
-- Canonical execution timestamps are `started_at` and `ended_at` in UTC ISO 8601 form.
-- Input provenance includes only external artifacts actually consumed by the run.
-- Output provenance includes only external artifacts actually produced by the run.
-- Artifact hashes are optional SHA-256 values calculated from file bytes.
-- Hashes are artifact-identity evidence, not statistical validation.
-- `READ`/`OUTPUT` events and input/output artifact provenance remain conceptually distinct.
-- Provenance metadata must not be repeated across semantic events.
-- Environment fingerprinting remains out of scope.
-- Phase 10.5 defines the model only; it does not freeze provenance API methods or implement hashing/runtime artifact capture.
-
-## 12. Exit criteria
-
-The model can represent:
-
-```text
-Program: tlf_population.py
-Run ID: 7eab...
-Started: 2026-09-12T14:32:18Z
-Ended: 2026-09-12T14:32:19Z
-
-Inputs:
-  data/adsl.parquet
-  sha256=8f31...
-
-Outputs:
-  rtf/tlf_population.rtf
-  sha256=a791...
-```
-
-without introducing environment fingerprinting or adding provenance noise to semantic events.
+Hard process termination may prevent finalization because Python context-manager exit is not guaranteed. Automatic recovery of incomplete spools is not part of the alpha scope.
