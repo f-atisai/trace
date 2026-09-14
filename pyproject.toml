@@ -43,6 +43,7 @@ dev = [
 ]
 examples = [
     "pandas>=2.2",
+    "polars>=1.0",
     "rtflite>=1.0",
 ]
 
