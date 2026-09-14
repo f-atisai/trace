@@ -67,8 +67,25 @@ class Trace(_CoreTrace):
         tb: TracebackType | None,
     ) -> Literal[False]:
         result = super().__exit__(exc_type, exc, tb)
-        if exc_type is None and self.log_file is not None:
+        if self.log_file is None:
+            return result
+
+        if exc_type is not None:
+            try:
+                self._finalize_log()
+            except BaseException:
+                # The program exception always takes precedence over TRACE
+                # finalization or cleanup failures.
+                pass
+            return result
+
+        try:
             self._finalize_log()
+        except Exception as finalization_error:
+            raise RuntimeError(
+                "TRACE log finalization failed; the event spool was preserved "
+                "when possible"
+            ) from finalization_error
         return result
 
     def _emit(self, event: TraceEvent) -> None:
@@ -142,25 +159,41 @@ class Trace(_CoreTrace):
             input_artifacts=tuple(self._input_artifacts),
             output_artifacts=tuple(self._output_artifacts),
         )
-        staging = tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            prefix=f".{self.log_file.name}.{self.run_id}.",
-            suffix=".final.tmp",
-            dir=self.log_file.parent,
-            delete=False,
-        )
-        staging_path = Path(staging.name)
+        staging_path: Path | None = None
         try:
+            staging = tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                prefix=f".{self.log_file.name}.{self.run_id}.",
+                suffix=".final.tmp",
+                dir=self.log_file.parent,
+                delete=False,
+            )
+            staging_path = Path(staging.name)
             with staging:
                 staging.write(render_provenance(provenance))
                 staging.write("\n\n")
                 with spool_path.open("r", encoding="utf-8") as spool:
                     for line in spool:
                         staging.write(line)
+                staging.flush()
+                os.fsync(staging.fileno())
+
             os.replace(staging_path, self.log_file)
+            staging_path = None
             spool_path.unlink()
             self._spool_path = None
         finally:
-            if staging_path.exists():
-                staging_path.unlink()
+            if staging_path is not None:
+                self._safe_unlink(staging_path)
+
+    @staticmethod
+    def _safe_unlink(path: Path) -> None:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError:
+            # Cleanup is best-effort on a failed finalization path. The
+            # primary finalization error must remain the reported failure.
+            pass
