@@ -1,14 +1,14 @@
 # TRACE Execution Provenance
 
 **Phase:** 10.5 / Developer Preview implementation  
-**Status:** Phase 1 implemented  
-**Scope:** Program-level execution identity and physical input/output artifact provenance
+**Status:** Phase 2 implemented  
+**Scope:** Program-level execution identity, artifact provenance, and finalized review-log durability
 
 ## 1. Purpose
 
 TRACE provenance identifies **which program execution and physical artifacts the recorded execution evidence belongs to**.
 
-Provenance is program-level. It is not repeated on ordinary semantic events, and it must not require TRACE to delay live event output.
+Provenance is program-level. It is not repeated on ordinary semantic events, and TRACE does not delay live event output to construct it.
 
 The Developer Preview model is:
 
@@ -21,7 +21,7 @@ Execution provenance
 └── output_artifacts
 ```
 
-Artifact hashing and environment fingerprinting are outside the current alpha implementation.
+Artifact hashing and environment fingerprinting are outside the alpha implementation.
 
 ## 2. Execution identity
 
@@ -36,8 +36,6 @@ Artifact hashing and environment fingerprinting are outside the current alpha im
 A single execution timestamp is intentionally used in the concise reviewer-facing summary. Event durations remain lifecycle diagnostics rather than provenance fields.
 
 ## 3. Artifact provenance
-
-An input artifact is an external physical artifact consumed by the run. An output artifact is an external physical artifact produced by the run.
 
 For the Developer Preview:
 
@@ -57,35 +55,51 @@ OUTPUT event           what production action occurred
 output provenance      which physical artifact was produced
 ```
 
-## 4. Streaming and final-log architecture
+A run with no registered artifacts renders `(none)` explicitly in the corresponding provenance sections.
 
-TRACE has two output responsibilities:
+## 4. Streaming and finalized-log architecture
 
-```text
-live console output    what is happening now
-final TRACE log        what happened in this run
-```
-
-Semantic events continue to stream immediately. TRACE does not hold the full event stream in memory.
-
-When `log_file` is configured, each rendered event is also appended to an internal file-backed event spool:
+TRACE separates live execution visibility from the finalized review artifact:
 
 ```text
 TraceEvent
    │
-   ├──► live console
-   └──► temporary event spool
+   ├──► live console immediately
+   └──► file-backed event spool
+                  │
+                  ▼
+        execution reaches __exit__
+                  │
+                  ▼
+        finalized provenance
+                  │
+                  ▼
+        staging review log
+                  │
+                  ▼
+          atomic replacement
+                  │
+                  ▼
+             log_file
 ```
 
-At successful managed-run completion, TRACE:
+TRACE does **not** retain the full event stream in memory. Each rendered semantic event streams immediately and, when `log_file` is configured for a managed run, is appended to an internal file-backed spool in the same order.
 
-1. emits END through the normal live path;
-2. finalizes the program-level provenance summary;
-3. creates a staging file containing provenance, a blank line, and the event spool;
-4. atomically publishes the staging file to `log_file`;
-5. removes the completed event spool.
+On normal completion or an ordinary Python exception, TRACE attempts to finalize the review log after the END event has been emitted. The staging file contains:
 
-The resulting review log is:
+```text
+provenance block
+blank line
+complete event spool
+```
+
+The staging file is flushed and closed before publication. TRACE then uses atomic replacement where supported by the host filesystem. The destination is never incrementally rewritten by TRACE.
+
+A repeated run targeting the same `log_file` therefore replaces the previous complete review log with the new complete run rather than appending or mixing runs.
+
+## 5. Final log
+
+A finalized review log has this form:
 
 ```text
 TRACE EXECUTION
@@ -106,17 +120,73 @@ INFO [READ] [ADSL] loaded – source=data/adsl.xpt
 INFO [END] [T14_01] execution completed – 0.84s
 ```
 
-The semantic event text in the final log is the same rendered text that was streamed live.
+Failed program execution is also finalized when Python reaches context-manager exit:
 
-## 5. `log_file` semantics
+```text
+...
+ERROR [STEP] [Analysis Population] failed – ValueError
+ERROR [END] [T14_01] execution failed – ValueError
+```
 
-`log_file` identifies the finalized provenance-first TRACE review log for a managed run.
+The semantic event text in the final log is the same rendered text that was streamed live. Provenance fields do not leak into individual semantic event rendering.
 
-Temporary spool and staging files are internal implementation details. TRACE does not expose them through the public API.
+## 6. Failure precedence
+
+The statistical program's active exception has absolute precedence over TRACE finalization failures.
+
+If user code raises inside the context, TRACE:
+
+1. attempts to emit the failure-related STEP/END evidence;
+2. attempts to finalize the provenance-first log;
+3. suppresses any secondary finalization or cleanup failure;
+4. propagates the original program exception unchanged.
+
+This applies to failures in provenance rendering, spool reading, staging creation/writing, final-file replacement, and cleanup.
+
+If there is **no** active program exception and finalization fails, TRACE raises a `RuntimeError` indicating that log finalization failed. TRACE must not silently report a successful managed run when its configured review artifact could not be finalized.
+
+## 7. Evidence preservation and cleanup
+
+After successful publication, TRACE removes the completed event spool. Staging files are also removed after successful finalization.
+
+If finalization fails before publication, TRACE preserves the event spool when practical. This retains the streamed execution evidence for diagnosis even though it is an internal file rather than a finalized review artifact.
+
+A failed staging file is cleaned up on a best-effort basis. Cleanup failure does not replace the primary finalization failure and never replaces an already-active program exception.
+
+Temporary spool and staging paths are internal implementation details and are not part of the public API.
+
+## 8. Incomplete runs
+
+Normal Python completion and normal Python exceptions execute context-manager finalization:
+
+```text
+normal completion  → finalized provenance-first log
+Python exception   → finalized provenance-first log attempted; original exception propagates
+```
+
+Hard process termination is different:
+
+```text
+process kill
+interpreter crash
+power loss
+os._exit(...)
+other termination that bypasses __exit__
+        ↓
+finalization not guaranteed
+```
+
+Such termination may leave only the internal event spool. TRACE does not implement automatic spool discovery, recovery, or replay in the alpha Developer Preview. Recovery tooling may be considered after alpha feedback.
+
+## 9. `log_file` semantics
+
+`log_file` identifies the finalized provenance-first TRACE review artifact for a managed run.
 
 Without `log_file`, TRACE remains a live console tool and does not silently create a persistent provenance log.
 
-## 6. Structured events remain authoritative
+The configured destination is published only after the complete new review log has been assembled. If publication fails before replacement, an existing destination remains intact where the filesystem's atomic replacement semantics provide that guarantee.
+
+## 10. Structured events remain authoritative
 
 The event path remains:
 
@@ -134,7 +204,7 @@ text event
 
 `TraceEvent` remains the source of semantic truth. The spool stores the rendered review representation only so the final human-readable log can be assembled after execution.
 
-## 7. Current scope boundaries
+## 11. Alpha scope boundaries
 
 The Developer Preview provenance implementation does not include:
 
@@ -148,27 +218,26 @@ environment variables
 source-code copies
 artifact contents
 automatic incomplete-run recovery
-public sink or spool APIs
+public sink, spool, staging, or recovery APIs
 ```
 
 Artifact hashing remains a post-alpha API discussion and must not change the current constructor during the Developer Preview.
 
-## 8. Phase 1 decisions
+## 12. Frozen Developer Preview rules
 
-- Semantic TRACE events remain live-streaming.
-- No full-run semantic event buffer is kept in memory.
-- Provenance remains program-level.
+- Semantic TRACE events stream live.
+- TRACE does not use a full-run in-memory event buffer.
+- Provenance is program-level rather than event-level.
 - `READ source` and `OUTPUT path` register physical artifacts during managed runs.
 - Artifact paths preserve first-seen order and are deduplicated.
-- `log_file` represents the finalized review artifact.
-- The final log places provenance before semantic events.
-- Final logs are assembled through a staging file and atomic replacement.
-- No persistent provenance file is created when `log_file` is absent.
+- `log_file` is the finalized review artifact.
+- Final logs are assembled after execution from provenance plus the event spool.
+- Final publication uses a flushed, closed staging file and atomic replacement where supported.
+- Normal Python failures still attempt finalization.
+- An active program exception is never replaced by a TRACE finalization failure.
+- A finalization failure without a program exception is surfaced as a TRACE runtime failure.
+- Successful finalization removes temporary files.
+- Failed finalization preserves the event spool when practical.
+- Hard termination may leave an incomplete spool; alpha performs no automatic recovery.
 - The public `Trace` constructor remains unchanged.
-- Hashing and failure-hardening behavior are deferred.
-
-## 9. Phase 2 boundary
-
-Phase 2 will harden normal-exception finalization, finalization failures, spool preservation, cleanup guarantees, repeated destination replacement, and the rule that TRACE failures must not mask an active program exception.
-
-Hard process termination may prevent finalization because Python context-manager exit is not guaranteed. Automatic recovery of incomplete spools is not part of the alpha scope.
+- Artifact hashing is deliberately deferred until post-alpha discussion.
