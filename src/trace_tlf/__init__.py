@@ -6,6 +6,6 @@ inside their implementation modules for TRACE development, but they are not
 part of the alpha compatibility contract.
 """
 
-from .trace import Trace
+from .runtime import Trace
 
 __all__ = ["Trace"]
