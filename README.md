@@ -35,7 +35,7 @@ INFO [STEP]   [Analysis population] completed – 0.031s
 INFO [END]    [T14_01] execution completed – 0.034s
 ```
 
-With `log_file` configured, the final review log also records program-level execution provenance before the semantic event stream:
+With `log_file` configured on a managed run, the final review log also records program-level execution provenance before the semantic event stream:
 
 ```text
 TRACE EXECUTION
@@ -102,6 +102,8 @@ with Trace("T14_01", log_file="logs/T14_01.log") as trace:
     ...
 ```
 
+Continue with the [`Getting Started guide`](docs/guides/getting-started.md) for the complete programmer workflow.
+
 ## Core concepts
 
 TRACE deliberately uses a small statistical-programming vocabulary. The canonical semantic operations are:
@@ -133,7 +135,7 @@ python examples/population_summary.py
 python examples/specific_adverse_events.py
 ```
 
-See [`examples/README.md`](examples/README.md) for data provenance, workflow references, and reviewer guidance.
+See [`examples/README.md`](examples/README.md) for data provenance and workflow references, and [`docs/examples/README.md`](docs/examples/README.md) for the reviewer perspective.
 
 ## Framework vs Python implementation
 
@@ -161,19 +163,19 @@ from trace_tlf import Trace
 
 The alpha public API includes the Tier 1 semantic helpers, context-managed lifecycle, `trace.step()`, and the advanced `trace.log()` escape hatch. Domain-model classes, renderers, provenance internals, and sink implementation details are not part of the public compatibility contract.
 
-See [`docs/api/`](docs/api/) for the authoritative Developer Preview API boundary.
+See [`docs/api/`](docs/api/) for the authoritative Developer Preview API.
 
 ## Documentation
 
-Use the documentation by purpose rather than reading it front to back:
+For normal Developer Preview use, follow the public documentation path:
 
-- [`docs/framework/`](docs/framework/) — TRACE semantics, vocabulary, and reviewer workflow.
-- [`docs/api/`](docs/api/) — public Python API.
-- [`docs/guides/`](docs/guides/) — task-oriented guidance, including Quarto use.
-- [`docs/examples/`](docs/examples/) — reviewer-oriented execution examples.
-- [`docs/design/`](docs/design/) — governing design decisions and architecture history.
+1. [`docs/guides/getting-started.md`](docs/guides/getting-started.md) — install and instrument your first workflow.
+2. [`docs/api/`](docs/api/) — exact public Python API signatures and semantics.
+3. [`examples/README.md`](examples/README.md) — run the public-data flagship examples.
+4. [`docs/framework/`](docs/framework/) — TRACE semantics, vocabulary, and reviewer workflow.
+5. [`docs/guides/quarto.md`](docs/guides/quarto.md) — optional Quarto workflow.
 
-The README is intentionally a product introduction rather than the architecture specification.
+[`docs/design/`](docs/design/) contains governing design decisions and architecture history. It is not required to use TRACE.
 
 ## Contributing
 
