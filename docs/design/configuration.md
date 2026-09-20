@@ -82,7 +82,7 @@ CRITICAL
 
 Default: `INFO`.
 
-Severity semantics themselves are defined in [`domain-model.md`](domain-model.md).
+Severity semantics themselves are defined in [TRACE Domain Model Specification](domain-model.md).
 
 ## 4. Configuration boundary
 
@@ -109,7 +109,7 @@ Instance configuration establishes context shared by emitted events. At minimum 
 
 Context should be established once rather than repeated on every operation call.
 
-The canonical context model belongs to [`domain-model.md`](domain-model.md), while run behavior belongs to [`lifecycle.md`](lifecycle.md).
+The canonical context model belongs to [TRACE Domain Model Specification](domain-model.md), while run behavior belongs to [TRACE Phase 7 — Lifecycle Behavior](lifecycle.md).
 
 ## 6. Advanced logger access
 
@@ -141,7 +141,7 @@ Detailed exception classes and validation mechanics remain implementation concer
 
 ## 9. Related specifications
 
-- [`domain-model.md`](domain-model.md) — context and severity semantics.
-- [`minimum-programmer-experience.md`](minimum-programmer-experience.md) — routine-use complexity constraints.
-- [`lifecycle.md`](lifecycle.md) — run identity, START/END behavior, and lifecycle-related file semantics.
-- [`tier-1-api.md`](tier-1-api.md) — operation methods that consume the configured TRACE instance.
+- [TRACE Domain Model Specification](domain-model.md) — context and severity semantics.
+- [TRACE Phase 2 — Minimum Programmer Experience](minimum-programmer-experience.md) — routine-use complexity constraints.
+- [TRACE Phase 7 — Lifecycle Behavior](lifecycle.md) — run identity, START/END behavior, and lifecycle-related file semantics.
+- [TRACE Tier 1 API Specification](tier-1-api.md) — operation methods that consume the configured TRACE instance.

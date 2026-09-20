@@ -529,9 +529,9 @@ Program-level provenance in the finalized managed `log_file` is implemented beha
 
 ## Where to go next
 
-- [`../guides/getting-started.md`](../guides/getting-started.md) — first complete TRACE workflow.
-- [`../framework/core-operations-v0.1.md`](../framework/core-operations-v0.1.md) — canonical operation meanings.
-- [`../framework/reviewer-guide.md`](../framework/reviewer-guide.md) — how to review TRACE evidence.
-- [`../../examples/README.md`](../../examples/README.md) — executable public-data examples.
+- [Getting Started with TRACE](../guides/getting-started.md) — first complete TRACE workflow.
+- [TRACE Core Operations v0.1](../framework/core-operations-v0.1.md) — canonical operation meanings.
+- [Reviewing Statistical Programs with TRACE](../framework/reviewer-guide.md) — how to review TRACE evidence.
+- [TRACE Statistical Programming Examples](../../examples/README.md) — executable public-data examples.
 
 The design documents explain rationale and architecture history, but they are not required to use the alpha public API.

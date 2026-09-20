@@ -135,7 +135,7 @@ python examples/population_summary.py
 python examples/specific_adverse_events.py
 ```
 
-See [`examples/README.md`](examples/README.md) for data provenance and workflow references, and [`docs/examples/README.md`](docs/examples/README.md) for the reviewer perspective.
+See [TRACE Statistical Programming Examples](examples/README.md) for data provenance and workflow references, and [TRACE Reviewer Examples](docs/examples/README.md) for the reviewer perspective.
 
 ## Framework vs Python implementation
 
@@ -163,23 +163,23 @@ from trace_tlf import Trace
 
 The alpha public API includes the Tier 1 semantic helpers, context-managed lifecycle, `trace.step()`, and the advanced `trace.log()` escape hatch. Domain-model classes, renderers, provenance internals, and sink implementation details are not part of the public compatibility contract.
 
-See [`docs/api/`](docs/api/) for the authoritative Developer Preview API.
+See the [TRACE API](docs/api/) for the authoritative Developer Preview API.
 
 ## Documentation
 
 For normal Developer Preview use, follow the public documentation path:
 
-1. [`docs/guides/getting-started.md`](docs/guides/getting-started.md) — install and instrument your first workflow.
-2. [`docs/api/`](docs/api/) — exact public Python API signatures and semantics.
-3. [`examples/README.md`](examples/README.md) — run the public-data flagship examples.
-4. [`docs/framework/`](docs/framework/) — TRACE semantics, vocabulary, and reviewer workflow.
-5. [`docs/guides/quarto.md`](docs/guides/quarto.md) — optional Quarto workflow.
+1. [Getting Started with TRACE](docs/guides/getting-started.md) — install and instrument your first workflow.
+2. [TRACE API](docs/api/) — exact public Python API signatures and semantics.
+3. [TRACE Statistical Programming Examples](examples/README.md) — run the public-data flagship examples.
+4. [TRACE Framework](docs/framework/) — TRACE semantics, vocabulary, and reviewer workflow.
+5. [Using TRACE with Quarto](docs/guides/quarto.md) — optional Quarto workflow.
 
-[`docs/design/`](docs/design/) contains governing design decisions and architecture history. It is not required to use TRACE.
+[TRACE Design Documentation](docs/design/) contains governing design decisions and architecture history. It is not required to use TRACE.
 
 ## Contributing
 
-API-design discussion, statistical-programming use cases, bug reports, and implementation contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+API-design discussion, statistical-programming use cases, bug reports, and implementation contributions are welcome. See [Contributing to TRACE](CONTRIBUTING.md) before opening a pull request.
 
 For repository development:
 

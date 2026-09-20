@@ -21,7 +21,7 @@ trace.validate()
 trace.output()
 ```
 
-The vocabulary itself is defined in [`../framework/core-operations-v0.1.md`](../framework/core-operations-v0.1.md). The user-facing alpha contract is defined in [`../api/README.md`](../api/README.md).
+The vocabulary itself is defined in [TRACE Core Operations v0.1](../framework/core-operations-v0.1.md). The user-facing alpha contract is defined in the [TRACE API](../api/README.md).
 
 > **Common calls require very few arguments; richer metadata is optional.**
 
@@ -37,7 +37,7 @@ TRACE Core is semantic and object-independent. Core calls identify analytical ob
 - Use reviewer-meaningful semantic identities such as `ADSL`, `AGEGR1`, `Overall Survival`, `Safety Population`, or `T14_01`.
 - Quantitative diagnostics belong in metrics; descriptive metadata belongs in details.
 - Diagnostic units should be explicit where a count could mean rows, subjects, keys, groups, or another analytical unit.
-- Core-supplied diagnostic values are not equivalent to values directly observed by an integration. Evidence origin is defined in [`reviewer-experience.md`](reviewer-experience.md).
+- Core-supplied diagnostic values are not equivalent to values directly observed by an integration. Evidence origin is defined in [TRACE Reviewer Experience](reviewer-experience.md).
 
 ## Primary alpha workflow
 

@@ -2,7 +2,7 @@
 
 **Phase:** 2 — Design the Minimum Programmer Experience  
 **Status:** Draft normative UX specification  
-**Scope:** Programmer-facing experience; public signatures are owned by [`tier-1-api.md`](tier-1-api.md)
+**Scope:** Programmer-facing experience; public signatures are owned by [TRACE Tier 1 API Specification](tier-1-api.md)
 
 ## 1. Purpose
 
@@ -27,7 +27,7 @@ TRACE v0.x should satisfy these principles:
 9. **No Python logging knowledge is required.** Python's logging infrastructure is an implementation detail for routine users.
 10. **Incremental adoption is valid.** A program may instrument only the operations that provide useful execution evidence.
 
-The canonical vocabulary is defined in [`../framework/core-operations-v0.1.md`](../framework/core-operations-v0.1.md); exact method signatures belong to [`tier-1-api.md`](tier-1-api.md).
+The canonical vocabulary is defined in [TRACE Core Operations v0.1](../framework/core-operations-v0.1.md); exact method signatures belong to [TRACE Tier 1 API Specification](tier-1-api.md).
 
 ## 3. Benchmark
 
@@ -130,8 +130,8 @@ These criteria should be tested against realistic TLF, ADaM, QC, and analysis wo
 
 ## 7. Related specifications
 
-- [`../framework/core-operations-v0.1.md`](../framework/core-operations-v0.1.md) — canonical vocabulary.
-- [`tier-1-api.md`](tier-1-api.md) — public method signatures.
-- [`object-vs-operation.md`](object-vs-operation.md) — semantic Core and runtime-integration boundary.
-- [`configuration.md`](configuration.md) — routine construction and configuration.
-- [`reviewer-experience.md`](reviewer-experience.md) — evidence that instrumentation should expose to reviewers.
+- [TRACE Core Operations v0.1](../framework/core-operations-v0.1.md) — canonical vocabulary.
+- [TRACE Tier 1 API Specification](tier-1-api.md) — public method signatures.
+- [TRACE Phase 4 — Object vs Operation](object-vs-operation.md) — semantic Core and runtime-integration boundary.
+- [TRACE Phase 6 — Configuration](configuration.md) — routine construction and configuration.
+- [TRACE Reviewer Experience](reviewer-experience.md) — evidence that instrumentation should expose to reviewers.

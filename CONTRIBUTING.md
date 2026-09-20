@@ -68,7 +68,7 @@ The public import is intentionally small:
 from trace_tlf import Trace
 ```
 
-Do not treat internal event classes, renderers, provenance internals, sinks, or implementation objects as public API merely because they can be imported from internal modules. The current public boundary is documented in [`docs/api/README.md`](docs/api/README.md).
+Do not treat internal event classes, renderers, provenance internals, sinks, or implementation objects as public API merely because they can be imported from internal modules. The current public boundary is documented in the [TRACE API](docs/api/README.md).
 
 ## Choose the right contribution path
 

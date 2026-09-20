@@ -78,7 +78,7 @@ UTC wall clock   → run provenance identity
 monotonic clock  → elapsed lifecycle duration
 ```
 
-The provenance and final-log rules are defined in [`provenance.md`](provenance.md).
+The provenance and final-log rules are defined in [TRACE Execution Provenance](provenance.md).
 
 ## 5. Exception handling and precedence
 
@@ -210,9 +210,9 @@ During execution, the semantic events appear immediately on the console. After c
 
 ## 13. Related specifications
 
-- [`domain-model.md`](domain-model.md) — status, severity, metrics, and context.
-- [`configuration.md`](configuration.md) — `Trace(...)` construction and inherited context.
-- [`provenance.md`](provenance.md) — program-level provenance and finalized review logs.
-- [`reviewer-experience.md`](reviewer-experience.md) — evidence origin and reviewer interpretation.
-- [`step-level-instrumentation.md`](step-level-instrumentation.md) — logical execution scopes.
-- [`../framework/core-operations-v0.1.md`](../framework/core-operations-v0.1.md) — statistical operation vocabulary.
+- [TRACE Domain Model Specification](domain-model.md) — status, severity, metrics, and context.
+- [TRACE Phase 6 — Configuration](configuration.md) — `Trace(...)` construction and inherited context.
+- [TRACE Execution Provenance](provenance.md) — program-level provenance and finalized review logs.
+- [TRACE Reviewer Experience](reviewer-experience.md) — evidence origin and reviewer interpretation.
+- [TRACE Phase 8 — Step-Level Instrumentation](step-level-instrumentation.md) — logical execution scopes.
+- [TRACE Core Operations v0.1](../framework/core-operations-v0.1.md) — statistical operation vocabulary.

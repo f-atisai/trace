@@ -192,7 +192,7 @@ A reviewer can:
 3. investigate validations, warnings, or unexpected data transitions; and
 4. reconcile the resulting TLF with both the documented intent and execution evidence.
 
-The broader reviewer workflow is defined in [`../framework/reviewer-guide.md`](../framework/reviewer-guide.md).
+The broader reviewer workflow is defined in [Reviewing Statistical Programs with TRACE](../framework/reviewer-guide.md).
 
 ## What TRACE does not add to Quarto
 

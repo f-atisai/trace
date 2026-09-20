@@ -21,16 +21,16 @@ It should not restate an established specification merely to provide context.
 
 | Concept | Authoritative document |
 |---|---|
-| Event structure and core domain concepts | [`domain-model.md`](domain-model.md) |
-| Canonical statistical-operation vocabulary | [`../framework/core-operations-v0.1.md`](../framework/core-operations-v0.1.md) |
-| Public Tier 1 API contract | [`tier-1-api.md`](tier-1-api.md) |
-| Configuration behavior | [`configuration.md`](configuration.md) |
-| Program lifecycle | [`lifecycle.md`](lifecycle.md) |
-| Step instrumentation | [`step-level-instrumentation.md`](step-level-instrumentation.md) |
-| Programmer experience principles | [`minimum-programmer-experience.md`](minimum-programmer-experience.md) |
-| Reviewer model and diagnostic evidence | [`reviewer-experience.md`](reviewer-experience.md) |
-| Execution provenance | [`provenance.md`](provenance.md) |
-| Prototype findings | [`reference-prototype-findings.md`](reference-prototype-findings.md) |
+| Event structure and core domain concepts | [TRACE Domain Model Specification](domain-model.md) |
+| Canonical statistical-operation vocabulary | [TRACE Core Operations v0.1](../framework/core-operations-v0.1.md) |
+| Public Tier 1 API contract | [TRACE Tier 1 API Specification](tier-1-api.md) |
+| Configuration behavior | [TRACE Phase 6 — Configuration](configuration.md) |
+| Program lifecycle | [TRACE Phase 7 — Lifecycle Behavior](lifecycle.md) |
+| Step instrumentation | [TRACE Phase 8 — Step-Level Instrumentation](step-level-instrumentation.md) |
+| Programmer experience principles | [TRACE Phase 2 — Minimum Programmer Experience](minimum-programmer-experience.md) |
+| Reviewer model and diagnostic evidence | [TRACE Reviewer Experience](reviewer-experience.md) |
+| Execution provenance | [TRACE Execution Provenance](provenance.md) |
+| Prototype findings | [TRACE Reference Prototype Findings](reference-prototype-findings.md) |
 
 When a later design phase depends on one of these concepts, it should link to the authoritative document instead of redefining it.
 
@@ -38,11 +38,11 @@ When a later design phase depends on one of these concepts, it should link to th
 
 The following files primarily preserve design evidence or historical reasoning rather than define a public contract:
 
-- [`api-design-plan.md`](api-design-plan.md)
-- [`comparative-review.md`](comparative-review.md)
-- [`generic-structured-logging.md`](generic-structured-logging.md)
-- [`object-vs-operation.md`](object-vs-operation.md)
-- [`reference-prototype.md`](reference-prototype.md)
+- [TRACE API Design Plan](api-design-plan.md)
+- [Comparative Design Review](comparative-review.md)
+- [TRACE Phase 5 — Generic Structured Logging](generic-structured-logging.md)
+- [TRACE Phase 4 — Object vs Operation](object-vs-operation.md)
+- [TRACE Reference Prototype Contract](reference-prototype.md)
 
 These documents are useful when reviewing why TRACE made a particular decision, but ordinary users should not need to read them to use TRACE.
 

@@ -207,6 +207,6 @@ The goal is not to make the reviewer approve TRACE. The goal is to make the stat
 
 ## Related specifications
 
-- [`core-operations-v0.1.md`](core-operations-v0.1.md) defines TRACE operation vocabulary.
-- [`../design/reviewer-experience.md`](../design/reviewer-experience.md) defines the reviewer model and diagnostic-evidence semantics.
-- [`../design/provenance.md`](../design/provenance.md) defines program-level execution provenance.
+- [TRACE Core Operations v0.1](core-operations-v0.1.md) defines TRACE operation vocabulary.
+- [TRACE Reviewer Experience](../design/reviewer-experience.md) defines the reviewer model and diagnostic-evidence semantics.
+- [TRACE Execution Provenance](../design/provenance.md) defines program-level execution provenance.

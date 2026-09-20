@@ -2,7 +2,7 @@
 
 This guide shows the normal TRACE workflow for a Python statistical program: perform the analysis with your existing tools, then record concise execution evidence at meaningful analytical boundaries.
 
-For exact method signatures, use the [`../api/README.md`](../api/README.md) API reference.
+For exact method signatures, use the [TRACE API](../api/README.md) reference.
 
 ## 1. Install the Developer Preview
 
@@ -208,12 +208,12 @@ program / Quarto document
 
 TRACE can make population attrition, merges, derivations, analyses, validations, output production, and execution order easier to inspect. It does not replace code review, output review, specification review, or independent QC.
 
-See the [`../framework/reviewer-guide.md`](../framework/reviewer-guide.md) for the complete reviewer workflow.
+See [Reviewing Statistical Programs with TRACE](../framework/reviewer-guide.md) for the complete reviewer workflow.
 
 ## Next steps
 
-- [`../api/README.md`](../api/README.md) — exact public API signatures and parameter semantics.
-- [`../../examples/README.md`](../../examples/README.md) — run the public CDISC Pilot Study flagship examples.
-- [`../examples/README.md`](../examples/README.md) — read those examples as execution evidence.
-- [`quarto.md`](quarto.md) — use TRACE inside a Quarto statistical-programming workflow.
-- [`../framework/core-operations-v0.1.md`](../framework/core-operations-v0.1.md) — canonical operation meanings.
+- [TRACE API](../api/README.md) — exact public API signatures and parameter semantics.
+- [TRACE Statistical Programming Examples](../../examples/README.md) — run the public CDISC Pilot Study flagship examples.
+- [TRACE Reviewer Examples](../examples/README.md) — read those examples as execution evidence.
+- [Using TRACE with Quarto](quarto.md) — use TRACE inside a Quarto statistical-programming workflow.
+- [TRACE Core Operations v0.1](../framework/core-operations-v0.1.md) — canonical operation meanings.

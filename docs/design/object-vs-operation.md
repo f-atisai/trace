@@ -31,7 +31,7 @@ trace.filter(
 
 > **TRACE Core records semantic execution events. Integrations may inspect runtime objects to enrich those events.**
 
-The public API contract is maintained in [`tier-1-api.md`](tier-1-api.md). This document records the architecture decision behind that contract.
+The public API contract is maintained in [TRACE Tier 1 API Specification](tier-1-api.md). This document records the architecture decision behind that contract.
 
 ## 2. Why this boundary exists
 
@@ -85,7 +85,7 @@ result:        Safety Population
 
 The source remains the event object; the named population is the result of the filter. TRACE does not need a separate `POPULATION` operation.
 
-The event model and object field semantics are defined in [`domain-model.md`](domain-model.md).
+The event model and object field semantics are defined in [TRACE Domain Model Specification](domain-model.md).
 
 ## 4. Core versus integration
 
@@ -134,7 +134,7 @@ records a **supplied** row count from the perspective of TRACE Core. A pandas in
 
 The semantic event can be identical while the diagnostic origin differs. Structured TRACE representations must preserve that distinction; the concise text renderer need not label every metric inline.
 
-The governing diagnostic-evidence model is defined in [`reviewer-experience.md`](reviewer-experience.md).
+The governing diagnostic-evidence model is defined in [TRACE Reviewer Experience](reviewer-experience.md).
 
 ## 6. Data minimization and retention
 
@@ -180,10 +180,10 @@ The main cost is that Core callers may initially provide some diagnostics explic
 
 ## 9. Related specifications
 
-- [`domain-model.md`](domain-model.md) — event structure and semantic object identity.
-- [`../framework/core-operations-v0.1.md`](../framework/core-operations-v0.1.md) — canonical operation meanings.
-- [`tier-1-api.md`](tier-1-api.md) — public operation signatures.
-- [`reviewer-experience.md`](reviewer-experience.md) — diagnostic origins and reviewer-facing evidence.
-- [`provenance.md`](provenance.md) — program-level execution and artifact provenance.
+- [TRACE Domain Model Specification](domain-model.md) — event structure and semantic object identity.
+- [TRACE Core Operations v0.1](../framework/core-operations-v0.1.md) — canonical operation meanings.
+- [TRACE Tier 1 API Specification](tier-1-api.md) — public operation signatures.
+- [TRACE Reviewer Experience](reviewer-experience.md) — diagnostic origins and reviewer-facing evidence.
+- [TRACE Execution Provenance](provenance.md) — program-level execution and artifact provenance.
 
 Future documents should reference this decision rather than reproduce the Core-versus-integration rationale.

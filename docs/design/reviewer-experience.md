@@ -53,7 +53,7 @@ reviewable execution evidence
 | Diagnostic | What measurable evidence describes that activity? | row counts, subject counts, duplicates, result dimensions |
 | Program-level provenance | Which execution and artifacts does this log belong to? | program, run ID, timestamps, input/output artifacts |
 
-Semantic-event vocabulary is defined in [`../framework/core-operations-v0.1.md`](../framework/core-operations-v0.1.md). Program-level provenance is defined in [`provenance.md`](provenance.md).
+Semantic-event vocabulary is defined in [TRACE Core Operations v0.1](../framework/core-operations-v0.1.md). Program-level provenance is defined in [TRACE Execution Provenance](provenance.md).
 
 ### 3.1 Diagnostic evidence
 
@@ -93,7 +93,7 @@ Derived:  TRACE calculated 249 from other recorded diagnostics.
 
 TRACE must not present these cases as equivalent evidence.
 
-Core may continue accepting supplied diagnostics. Future integrations can convert common diagnostics from supplied to observed evidence without changing operation semantics, consistent with [`object-vs-operation.md`](object-vs-operation.md).
+Core may continue accepting supplied diagnostics. Future integrations can convert common diagnostics from supplied to observed evidence without changing operation semantics, consistent with [TRACE Phase 4 — Object vs Operation](object-vs-operation.md).
 
 #### Derivation rule
 
@@ -177,7 +177,7 @@ WARN [VALIDATE] [ADSL] USUBJID uniqueness – FAIL, duplicate_subjects=17
 INFO [OUTPUT]   [T14_01] written – outputs/t14_01.rtf
 ```
 
-The provenance block identifies the run and artifacts once. Its detailed semantics are owned by [`provenance.md`](provenance.md).
+The provenance block identifies the run and artifacts once. Its detailed semantics are owned by [TRACE Execution Provenance](provenance.md).
 
 A future structured representation must retain diagnostic origins even if concise text rendering does not label every value inline. Machine-readable output, reviewer tooling, or an expanded rendering should be able to expose the distinction.
 
@@ -243,9 +243,9 @@ When completeness and readability conflict, TRACE should optimize for **accurate
 
 ## 9. Related design work
 
-- [`domain-model.md`](domain-model.md) — event structure and core domain concepts.
-- [`../framework/core-operations-v0.1.md`](../framework/core-operations-v0.1.md) — operation vocabulary and semantic boundaries.
-- [`tier-1-api.md`](tier-1-api.md) — public Tier 1 API contract.
-- [`object-vs-operation.md`](object-vs-operation.md) — Core-versus-integration boundary.
-- [`provenance.md`](provenance.md) — program-level execution and artifact provenance.
-- [`reference-prototype-findings.md`](reference-prototype-findings.md) — empirical prototype findings.
+- [TRACE Domain Model Specification](domain-model.md) — event structure and core domain concepts.
+- [TRACE Core Operations v0.1](../framework/core-operations-v0.1.md) — operation vocabulary and semantic boundaries.
+- [TRACE Tier 1 API Specification](tier-1-api.md) — public Tier 1 API contract.
+- [TRACE Phase 4 — Object vs Operation](object-vs-operation.md) — Core-versus-integration boundary.
+- [TRACE Execution Provenance](provenance.md) — program-level execution and artifact provenance.
+- [TRACE Reference Prototype Findings](reference-prototype-findings.md) — empirical prototype findings.

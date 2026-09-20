@@ -29,7 +29,7 @@ INFO [STEP] [Safety Population] completed – 0.031s
 
 > **Steps describe logical execution stages; statistical operations describe what happened inside them.**
 
-`STEP` belongs to TRACE's lifecycle/system layer, not the canonical statistical-operation vocabulary defined in [`../framework/core-operations-v0.1.md`](../framework/core-operations-v0.1.md).
+`STEP` belongs to TRACE's lifecycle/system layer, not the canonical statistical-operation vocabulary defined in [TRACE Core Operations v0.1](../framework/core-operations-v0.1.md).
 
 ## 2. Step lifecycle
 
@@ -50,7 +50,7 @@ ERROR [STEP] [Safety Population] failed – ValueError
 
 A failed step inside a context-managed program may therefore produce both a failed STEP event and a failed program END event. They describe different scopes.
 
-Duration follows the lifecycle rules in [`lifecycle.md`](lifecycle.md): store numeric `duration_seconds`, use monotonic timing, and leave presentation to the renderer.
+Duration follows the lifecycle rules in [TRACE Phase 7 — Lifecycle Behavior](lifecycle.md): store numeric `duration_seconds`, use monotonic timing, and leave presentation to the renderer.
 
 ## 3. Step context
 
@@ -58,7 +58,7 @@ Events emitted inside a step inherit the active step identity as structured cont
 
 Nested steps may additionally retain a structured `step_path` so hierarchy can be reconstructed without repeating the full path in every human-readable message.
 
-The context model itself is defined in [`domain-model.md`](domain-model.md).
+The context model itself is defined in [TRACE Domain Model Specification](domain-model.md).
 
 ## 4. Naming and granularity
 
@@ -184,8 +184,8 @@ The step name can make the analytical result concept visible to a reviewer witho
 
 ## 10. Related specifications
 
-- [`lifecycle.md`](lifecycle.md) — timing, exception propagation, and program lifecycle.
-- [`domain-model.md`](domain-model.md) — event context, status, metrics, and severity.
-- [`../framework/core-operations-v0.1.md`](../framework/core-operations-v0.1.md) — canonical statistical operations.
-- [`reviewer-experience.md`](reviewer-experience.md) — reviewer-facing evidence and diagnostic origins.
-- [`../guides/quarto.md`](../guides/quarto.md) — optional Quarto workflow without automatic step inference.
+- [TRACE Phase 7 — Lifecycle Behavior](lifecycle.md) — timing, exception propagation, and program lifecycle.
+- [TRACE Domain Model Specification](domain-model.md) — event context, status, metrics, and severity.
+- [TRACE Core Operations v0.1](../framework/core-operations-v0.1.md) — canonical statistical operations.
+- [TRACE Reviewer Experience](reviewer-experience.md) — reviewer-facing evidence and diagnostic origins.
+- [Using TRACE with Quarto](../guides/quarto.md) — optional Quarto workflow without automatic step inference.

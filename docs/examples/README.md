@@ -1,13 +1,13 @@
 # TRACE Reviewer Examples
 
-TRACE examples are intended to be read as execution evidence, not merely as API demonstrations. The executable programs under [`../../examples/`](../../examples/) use public CDISC Pilot Study ADaM data.
+TRACE examples are intended to be read as execution evidence, not merely as API demonstrations. The executable programs described in [TRACE Statistical Programming Examples](../../examples/) use public CDISC Pilot Study ADaM data.
 
 | Program | Reviewer focus |
 |---|---|
 | [`population_summary.py`](../../examples/population_summary.py) | analysis-population selection, attrition, treatment counts, validation, output |
 | [`specific_adverse_events.py`](../../examples/specific_adverse_events.py) | Safety Population, ADSL/ADAE merge, subject incidence by SOC/PT, validation, output |
 
-Both programs are pure-Python adaptations of public PyCSR analyses. PyCSR is used as the analysis-workflow reference only. TRACE reads the original CDISC Pilot Study XPORT (`.xpt`) datasets directly from the CDISC repository rather than using the parquet conversions in the PyCSR demonstration repository. Source and reproduction links are maintained in [`../../examples/README.md`](../../examples/README.md).
+Both programs are pure-Python adaptations of public PyCSR analyses. PyCSR is used as the analysis-workflow reference only. TRACE reads the original CDISC Pilot Study XPORT (`.xpt`) datasets directly from the CDISC repository rather than using the parquet conversions in the PyCSR demonstration repository. Source and reproduction links are maintained in [TRACE Statistical Programming Examples](../../examples/README.md).
 
 ## Reviewer pattern
 
@@ -100,7 +100,7 @@ python examples/population_summary.py
 python examples/specific_adverse_events.py
 ```
 
-Generated RTF artifacts are written to `example-output/`. See [`../../examples/README.md`](../../examples/README.md) for the authoritative data sources and workflow references.
+Generated RTF artifacts are written to `example-output/`. See [TRACE Statistical Programming Examples](../../examples/README.md) for the authoritative data sources and workflow references.
 
 ## What TRACE does not establish
 
