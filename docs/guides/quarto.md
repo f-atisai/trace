@@ -19,9 +19,9 @@ Quarto explains the analysis. TRACE records important execution evidence. The re
 
 ## Quarto is not required
 
-TRACE does not depend on Quarto and should not require programmers to adopt literate programming.
+TRACE does not depend on Quarto and does not require programmers to adopt literate programming.
 
-The same TRACE API should work in:
+The same TRACE API works in:
 
 ```text
 .py scripts
@@ -44,7 +44,7 @@ With Quarto
 analysis.qmd ─────► TRACE log ──────► TLF
 ```
 
-The semantic TRACE events should remain equivalent when the same analysis is implemented in either form.
+The semantic TRACE events remain equivalent when the same analysis is implemented in either form.
 
 ## Division of responsibility
 
@@ -60,7 +60,7 @@ Quarto and TRACE solve different problems.
 | Program-level provenance | No | Yes |
 | Statistical output | May present it | Records its production |
 
-TRACE should not duplicate the explanatory prose already present in a Quarto document. Likewise, Quarto narrative does not replace execution evidence.
+TRACE does not duplicate the explanatory prose already present in a Quarto document.
 
 ## Example: analysis population
 
@@ -169,7 +169,7 @@ This alignment is optional. TRACE does not require section names to become steps
 
 ## Rendering behavior
 
-TRACE should behave the same way during Quarto execution as it does during conventional Python execution.
+TRACE behaves the same way during Quarto execution as it does during conventional Python execution.
 
 A Quarto workflow may choose to suppress TRACE console messages from the rendered document while still writing them to the configured TRACE destination. That is a presentation choice controlled by the document or execution environment, not a separate TRACE semantic mode.
 
@@ -195,8 +195,6 @@ A reviewer can:
 The broader reviewer workflow is defined in [Reviewing Statistical Programs with TRACE](../framework/reviewer-guide.md).
 
 ## What TRACE does not add to Quarto
-
-Phase 10 does not introduce:
 
 ```text
 TRACE Quarto extension
