@@ -68,6 +68,62 @@ The workflow is the same except that the Python source and associated specificat
 
 TRACE does not remove the need to read source code. It reduces the amount of execution behavior a reviewer must reconstruct from source alone.
 
+## Review the flagship examples
+
+The executable examples use public CDISC Pilot Study ADaM data and can be read as execution evidence, not merely as API demonstrations.
+
+| Program | Reviewer focus |
+|---|---|
+| [`population_summary.py`](../../examples/population_summary.py) | Analysis-population selection, attrition, treatment counts, validation, and output. |
+| [`specific_adverse_events.py`](../../examples/specific_adverse_events.py) | Safety Population selection, ADSL/ADAE merging, and participant incidence by SOC and preferred term. |
+
+The programs are pure-Python adaptations of public PyCSR analyses. TRACE reads the original CDISC Pilot Study XPORT datasets directly from the CDISC repository. The [TRACE Statistical Programming Examples](../../examples/README.md) page provides the authoritative data sources and workflow references.
+
+### Population summary
+
+Read the population `FILTER` events together. They show how ADSL contributes to each analysis population and where participant counts change. The later summary and validation events make the treatment-level result reviewable, while `OUTPUT` connects the execution path to the generated RTF artifact.
+
+```text
+READ ADSL
+    ↓
+FILTER analysis populations
+    ↓
+AGGREGATE treatment summaries
+    ↓
+VALIDATE expected relationships
+    ↓
+OUTPUT RTF
+```
+
+### Specific adverse events
+
+The important boundary in this example is the merge between adverse-event records and the selected Safety Population. Inspect the contributing sources, merge diagnostics, and resulting incidence summary together.
+
+```text
+READ ADSL / ADAE
+       ↓
+FILTER Safety Population
+       ↓
+MERGE AE records with selected participants
+       ↓
+AGGREGATE participant incidence by SOC / PT / treatment
+       ↓
+VALIDATE
+       ↓
+OUTPUT RTF
+```
+
+To reproduce both examples:
+
+```bash
+python -m pip install -e ".[examples]"
+python examples/fetch_example_data.py
+python examples/population_summary.py
+python examples/specific_adverse_events.py
+```
+
+Generated RTF artifacts are written to `example-output/`.
+
 ## Reading a TRACE log
 
 A TRACE log has two reviewer-facing layers:
@@ -91,6 +147,8 @@ INFO [END]       [tlf_population.py] execution completed – 0.84s
 ```
 
 The **execution block** identifies the program run and its physical input/output artifacts. The **event stream** records what happened analytically and the diagnostics associated with those operations.
+
+During execution, the event stream is visible immediately on the console. After a managed run completes, the finalized log places program-level provenance before those events. The console answers what is happening now; the finalized log records what happened in that run.
 
 Read the event stream in order. TRACE is intended to expose the analytical journey rather than merely provide a collection of isolated messages.
 
