@@ -1,12 +1,10 @@
 # Getting Started with TRACE
 
-This guide shows the normal TRACE workflow for a Python statistical program: perform the analysis with your existing tools, then record concise execution evidence at meaningful analytical boundaries.
+Add TRACE to a statistical program in a few minutes. Keep using pandas and your usual reporting tools; TRACE simply records the operations you want reviewers to see.
 
-For exact method signatures, use the [TRACE API](../api/README.md) reference.
+## Install TRACE
 
-## 1. Install the Developer Preview
-
-TRACE currently targets Python 3.10+ and is being developed directly from the repository:
+TRACE currently supports Python 3.10+ and can be installed from the repository:
 
 ```bash
 git clone https://github.com/f-atisai/trace.git
@@ -14,206 +12,113 @@ cd trace
 python -m pip install -e .
 ```
 
-The supported import is:
+The example below uses pandas:
 
-```python
-from trace_tlf import Trace
+```bash
+python -m pip install pandas
 ```
 
-## 2. Create a managed TRACE run
+## Create a subject listing
 
-Use the context-manager form when the statistical program has a clear execution boundary:
+Save this example as `subject_listing.py`. It creates a small safety-population listing and records the important parts of the run.
 
 ```python
+from pathlib import Path
+
+import pandas as pd
+
 from trace_tlf import Trace
 
-with Trace("T14_01", log_file="logs/T14_01.log") as trace:
-    ...
-```
 
-TRACE emits START when the run begins and END when it finishes. Console events stream while the program executes. With `log_file` configured, the completed managed run is also published as a provenance-first review log.
-
-Use a new `Trace` instance for each execution.
-
-## 3. Record input acquisition
-
-Your normal library reads the data. TRACE records the semantic evidence afterward:
-
-```python
-adsl = pd.read_sas("data/adsl.xpt", format="xport", encoding="utf-8")
-
-trace.read(
-    "ADSL",
-    source="data/adsl.xpt",
-    rows=len(adsl),
-    columns=len(adsl.columns),
+adsl = pd.DataFrame(
+    {
+        "USUBJID": ["SUBJ001", "SUBJ002", "SUBJ003", "SUBJ004"],
+        "SAFFL": ["Y", "Y", "N", "Y"],
+        "TRT01A": ["Placebo", "Drug A", "Drug A", "Placebo"],
+        "AGE": [45, 62, 51, 70],
+        "SEX": ["F", "M", "F", "M"],
+    }
 )
-```
 
-The `source` identifies the physical input artifact. In a managed run with `log_file`, it also contributes to the program-level provenance summary.
+output_path = Path("outputs/safety_subject_listing.csv")
+output_path.parent.mkdir(exist_ok=True)
 
-TRACE Core does not own or retain the DataFrame.
+with Trace("L16_01", log_file="logs/L16_01.log") as trace:
+    trace.read("ADSL", rows=len(adsl), columns=len(adsl.columns))
 
-## 4. Instrument meaningful analytical stages
-
-Use `trace.step()` for coarse stages that help a reviewer follow the program:
-
-```python
-with trace.step("Analysis population"):
-    safety = adsl.loc[adsl["SAFFL"] == "Y"].copy()
+    listing = adsl.loc[
+        adsl["SAFFL"] == "Y",
+        ["USUBJID", "TRT01A", "AGE", "SEX"],
+    ].sort_values(["TRT01A", "USUBJID"])
 
     trace.filter(
         "ADSL",
         "SAFFL == 'Y'",
-        result="Safety Population",
+        result="Safety Subject Listing",
         before=len(adsl),
-        after=len(safety),
+        after=len(listing),
+    )
+
+    listing.to_csv(output_path, index=False)
+    trace.output(
+        "Safety Subject Listing",
+        output_path,
+        format="CSV",
+        rows=len(listing),
     )
 ```
 
-The statistical code still performs the filtering. TRACE records what happened and the supplied diagnostics.
+Run it:
 
-Do not create a step for every individual statement. A step should represent a reviewer-meaningful stage such as population selection, derivations, analysis, or output preparation.
+```bash
+python subject_listing.py
+```
 
-## 5. Record the operations that matter
-
-TRACE provides eleven semantic helpers:
+TRACE prints each event as it happens:
 
 ```text
-READ  CHECK  FILTER  SORT  DERIVE  TRANSFORM
-MERGE  AGGREGATE  ANALYZE  VALIDATE  OUTPUT
+INFO [START] [L16_01] execution started
+INFO [READ] [ADSL] loaded – N=4, Vars=5
+INFO [FILTER] [ADSL] SAFFL == 'Y' applied – N=4 → 3
+INFO [OUTPUT] [Safety Subject Listing] written – outputs/safety_subject_listing.csv, format=CSV, N=3
+INFO [END] [L16_01] execution completed – 0.01s
 ```
 
-For example, after combining AE records with the Safety Population:
+That is the basic TRACE pattern: perform the work, then record the operation with a nearby TRACE call.
 
-```python
-adae_safety = adae.merge(safety[["USUBJID"]], on="USUBJID", how="inner")
+>Tip: You do not need to trace every line.
 
-trace.merge(
-    "ADAE",
-    "Safety Population",
-    on="USUBJID",
-    how="inner",
-    result="Safety ADAE",
-    left_rows=len(adae),
-    right_rows=len(safety),
-    result_rows=len(adae_safety),
-)
-```
+For every available method and parameter, see the [TRACE API](../api/README.md).
 
-After producing a summary:
+## Open the review log
 
-```python
-trace.aggregate(
-    "Safety ADAE",
-    by=["AESOC", "AEDECOD", "TRT01A"],
-    result="AE incidence",
-    method="unique participant count",
-    rows=len(ae_summary),
-)
-```
-
-The goal is not to log every line. Record the operations that explain the analytical execution path.
-
-## 6. Record explicit validation separately
-
-Use `VALIDATE` only when the program has implemented an expectation that can pass or fail:
-
-```python
-trace.validate(
-    "Safety Population",
-    "participant count equals treatment totals",
-    passed=safety_total == treatment_total,
-    metrics={"participants": safety_total},
-)
-```
-
-`passed=True` means that criterion passed. It does not prove that the broader analysis, specification, or output is statistically correct.
-
-Use `CHECK` instead when you are recording an observation without a pass/fail expectation.
-
-## 7. Record the output artifact
-
-Write the artifact with the reporting library, then record it:
-
-```python
-write_rtf(table, "outputs/T14_01.rtf")
-
-trace.output(
-    "T14_01",
-    "outputs/T14_01.rtf",
-    format="RTF",
-)
-```
-
-In a managed run with `log_file`, the path is also registered as an output artifact in program-level provenance.
-
-## 8. Read the live execution evidence
-
-A run might stream:
-
-```text
-INFO [START]     [T14_01] execution started
-INFO [READ]      [ADSL] loaded – N=254, Vars=48
-INFO [STEP]      [Analysis population] started
-INFO [FILTER]    [ADSL] SAFFL == 'Y' applied – N=254 → 249
-INFO [STEP]      [Analysis population] completed – 0.031s
-INFO [AGGREGATE] [Safety ADAE] summarized
-INFO [VALIDATE]  [Safety Population] participant count equals treatment totals – PASS
-INFO [OUTPUT]    [T14_01] written – outputs/T14_01.rtf
-INFO [END]       [T14_01] execution completed – 0.84s
-```
-
-The console answers **what is happening now**.
-
-## 9. Review the finalized log
-
-When `log_file` is configured on a managed run, the persistent review artifact begins with program-level provenance:
+The example also creates `logs/L16_01.log`. It begins with the run and its output artifact, followed by the execution events:
 
 ```text
 TRACE EXECUTION
 
-Program:  T14_01
+Program:  L16_01
 Run ID:   7eab...
 Executed: 2026-09-14T14:32:18Z
 
 Input artifacts:
-  data/adsl.xpt
+  (none)
 
 Output artifacts:
-  outputs/T14_01.rtf
+  outputs/safety_subject_listing.csv
 
-INFO [START] [T14_01] execution started
+INFO [START] [L16_01] execution started
 ...
-INFO [END] [T14_01] execution completed – 0.84s
+INFO [END] [L16_01] execution completed – 0.01s
 ```
 
-The finalized log answers **what happened in this run** and connects the semantic execution path to its physical input and output artifacts.
+Start each execution with a new `Trace` instance. TRACE records what the program did.
 
-TRACE does not automatically hash artifacts or capture the execution environment in the Developer Preview.
+> Note: TRACE does not replace code review, output review, or independent QC.
 
-## 10. Review TRACE with the program and output
+## Where to go next
 
-A reviewer should use TRACE alongside the statistical program, specification, and output:
-
-```text
-program / Quarto document
-          │
-          ▼
-      TRACE log
-          │
-          ▼
-     output artifact
-```
-
-TRACE can make population attrition, merges, derivations, analyses, validations, output production, and execution order easier to inspect. It does not replace code review, output review, specification review, or independent QC.
-
-See [Reviewing Statistical Programs with TRACE](../framework/reviewer-guide.md) for the complete reviewer workflow.
-
-## Next steps
-
-- [TRACE API](../api/README.md) — exact public API signatures and parameter semantics.
-- [TRACE Statistical Programming Examples](../../examples/README.md) — run the public CDISC Pilot Study flagship examples.
-- [TRACE Reviewer Examples](../examples/README.md) — read those examples as execution evidence.
-- [Using TRACE with Quarto](quarto.md) — use TRACE inside a Quarto statistical-programming workflow.
-- [TRACE Core Operations v0.1](../framework/core-operations-v0.1.md) — canonical operation meanings.
+- [TRACE API](../api/README.md) — explore every operation and parameter.
+- [TRACE Statistical Programming Examples](../../examples/README.md) — run the public CDISC Pilot Study examples.
+- [Reviewing Statistical Programs with TRACE](../framework/reviewer-guide.md) — see how TRACE fits into review.
+- [Using TRACE with Quarto](quarto.md) — add TRACE to a Quarto workflow.
