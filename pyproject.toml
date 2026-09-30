@@ -52,7 +52,6 @@ Homepage = "https://github.com/f-atisai/trace"
 Documentation = "https://github.com/f-atisai/trace/tree/main/docs"
 Repository = "https://github.com/f-atisai/trace"
 Issues = "https://github.com/f-atisai/trace/issues"
-Changelog = "https://github.com/f-atisai/trace/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]
