@@ -1,6 +1,6 @@
 # TRACE Design Documentation
 
-The `docs/design/` directory preserves the reasoning, decisions, and empirical findings that shaped TRACE. It is not intended to duplicate the normative framework or public API documentation.
+The `docs/design/` directory preserves the reasoning, decisions, and empirical findings that shaped TRACE. It is not intended to duplicate the public API, concept pages, or task-oriented user documentation.
 
 ## Documentation rule
 
@@ -15,13 +15,15 @@ A design document should primarily do one or more of the following:
 - document consequences for later phases; or
 - preserve findings from experiments, prototypes, or comparative research.
 
-It should not restate an established specification merely to provide context.
+It should not restate an established public concept merely to provide context.
 
 ## Authoritative ownership
 
 | Concept | Authoritative document |
 |---|---|
-| Event structure and core domain concepts | [TRACE Domain Model Specification](domain-model.md) |
+| User-facing structured-event concept | [Structured events](../concepts/structured-events.md) |
+| User-facing program-level provenance concept | [Program-level provenance](../concepts/provenance.md) |
+| Event structure and internal domain concepts | [TRACE Domain Model Specification](domain-model.md) |
 | Canonical statistical-operation vocabulary | [TRACE Core Operations v0.1](../framework/core-operations-v0.1.md) |
 | Public Tier 1 API contract | [TRACE Tier 1 API Specification](tier-1-api.md) |
 | Configuration behavior | [TRACE Phase 6 — Configuration](configuration.md) |
@@ -29,10 +31,24 @@ It should not restate an established specification merely to provide context.
 | Step instrumentation | [TRACE Phase 8 — Step-Level Instrumentation](step-level-instrumentation.md) |
 | Programmer experience principles | [TRACE Phase 2 — Minimum Programmer Experience](minimum-programmer-experience.md) |
 | Reviewer model and diagnostic evidence | [TRACE Reviewer Experience](reviewer-experience.md) |
-| Execution provenance | [TRACE Execution Provenance](provenance.md) |
+| Provenance implementation design | [TRACE Execution Provenance](provenance.md) |
 | Prototype findings | [TRACE Reference Prototype Findings](reference-prototype-findings.md) |
 
 When a later design phase depends on one of these concepts, it should link to the authoritative document instead of redefining it.
+
+## Advanced evidence-origin terminology
+
+Design work may distinguish diagnostic values by how they were obtained:
+
+```text
+SUPPLIED   caller passed the value
+OBSERVED   TRACE or an integration inspected runtime state or an artifact
+DERIVED    TRACE calculated the value from diagnostics with known origins
+```
+
+This terminology belongs to architecture and integration design rather than the normal user documentation path. TRACE Core currently relies primarily on programmer-supplied diagnostics. User-facing documentation should describe what TRACE records without requiring users to classify evidence origin.
+
+If future integrations expose observed or derived diagnostics as a meaningful public capability, the public documentation can introduce those distinctions at that time.
 
 ## Design records and background research
 
@@ -53,16 +69,17 @@ design records
      │
      │ accepted decisions
      ▼
-framework specifications
+concepts and framework reference
      │
      ├──────────────► API reference
      │
      └──────────────► guides and examples
 ```
 
-- `docs/framework/` explains what TRACE means.
+- `docs/concepts/` explains the small set of ideas behind TRACE's public behavior.
+- `docs/framework/` defines the statistical-operation vocabulary and reviewer methodology.
 - `docs/api/` explains how to call the Python implementation.
 - `docs/guides/` explains how to accomplish statistical-programming tasks with TRACE.
-- `docs/design/` explains why TRACE was designed this way.
+- `docs/design/` explains why TRACE was designed this way and preserves internal architecture history.
 
-This separation keeps the user-facing documentation concise while preserving architectural history.
+This separation keeps the user-facing documentation concise while preserving architectural depth.
