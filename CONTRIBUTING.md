@@ -57,11 +57,12 @@ Build artifacts are written under `dist/` and should not be committed.
 src/trace_tlf/      TRACE for Python implementation
 tests/              Automated contract and behavior tests
 examples/           Executable statistical-programming examples
-docs/framework/     TRACE semantics and normative methodology
+docs/concepts/      User-facing TRACE concepts
+docs/framework/     Operation vocabulary and reviewer methodology
 docs/api/           Developer Preview public Python API
 docs/guides/        Task-oriented user guidance
 docs/examples/      Reviewer-oriented execution examples
-docs/design/        Design rationale and architecture history
+docs/design/        Design rationale, architecture, and history
 ```
 
 The public import is intentionally small:
@@ -106,7 +107,7 @@ The proposal should explain:
 
 A concrete use case is more valuable than an abstract request for another helper or configuration option.
 
-Design proposals belong in `docs/design/` only after there is a reason to preserve the design decision in the repository. Accepted public behavior belongs in the framework or API documentation rather than being defined only in design notes.
+Design proposals belong in `docs/design/` only after there is a reason to preserve the design decision in the repository. Accepted user-facing concepts belong in `docs/concepts/`, operation semantics and reviewer methodology belong in `docs/framework/`, and supported Python behavior belongs in `docs/api/`.
 
 ### Statistical-programming use case
 
@@ -191,15 +192,16 @@ Public behavior should be documented with the change that implements it.
 
 Use:
 
-- `docs/framework/` for TRACE semantics, vocabulary, and reviewer methodology;
+- `docs/concepts/` for concise user-facing explanations of TRACE concepts such as structured events and program-level provenance;
+- `docs/framework/` for canonical operation vocabulary and reviewer methodology;
 - `docs/api/` for the supported Python API;
 - `docs/guides/` for task-oriented workflows;
 - `docs/examples/` for reviewer-oriented execution examples; and
-- `docs/design/` for rationale, alternatives, and architecture decisions.
+- `docs/design/` for rationale, alternatives, internal architecture, experimental terminology, and design history.
 
 Executable statistical examples belong under `examples/`.
 
-Do not require ordinary users to read `docs/design/` to learn how to use supported public behavior.
+Do not require ordinary users to read `docs/design/` to learn how to use supported public behavior. Advanced terms such as evidence-origin classifications should stay in design documentation unless they become an exposed user-facing capability.
 
 ## Pull request checklist
 
