@@ -9,10 +9,6 @@ MERGE  AGGREGATE  ANALYZE  VALIDATE  OUTPUT
 
 These operations describe **what happened in the statistical workflow**. Python logging levels such as `INFO`, `WARNING`, and `ERROR` describe severity.
 
-TRACE classifies statistical intent rather than Python syntax. Equivalent pandas, Polars, NumPy, SQL, or custom implementations should map to the same TRACE operation.
-
-You do not need to trace every line. Record operations that materially help another programmer or reviewer understand inputs, population changes, derivations, data structure, analyses, validations, outputs, or execution flow.
-
 ## Quick selection guide
 
 ```text
