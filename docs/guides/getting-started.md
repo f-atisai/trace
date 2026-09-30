@@ -106,7 +106,7 @@ INFO [FILTER] [ADSL] SAFFL == 'Y' applied – N=4 → 3
 INFO [OUTPUT] [Safety Subject Listing] written – outputs/safety_subject_listing.csv, format=CSV, N=3
 ```
 
-Other TRACE operations cover checks, sorting, derivations, transformations, merges, aggregation, analyses, and validation. See the [TRACE API](../api/README.md) for the available methods and parameters.
+Other TRACE operations cover checks, sorting, derivations, transformations, merges, aggregation, analyses, and validation. Use the [TRACE operations guide](operations.md) to choose the right operation, and the [TRACE API](../api/README.md) for exact method parameters.
 
 ## Put it together
 
@@ -209,7 +209,8 @@ TRACE records what the program reports through its TRACE calls. It does not inde
 
 ## Where to go next
 
-- [TRACE API](../api/README.md) — see the supported operations and parameters.
+- [TRACE operations](operations.md) — choose the right statistical operation and see practical examples.
+- [TRACE API](../api/README.md) — see exact supported methods and parameters.
 - [TRACE Statistical Programming Examples](../../examples/README.md) — run complete examples using the public CDISC Pilot Study data.
 - [Reviewing Statistical Programs with TRACE](../framework/reviewer-guide.md) — see how another programmer or reviewer can use TRACE logs.
 - [Using TRACE with Quarto](quarto.md) — add TRACE to a Quarto workflow.

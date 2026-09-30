@@ -53,6 +53,8 @@ That gives TRACE logs predictable meaning across programs. It also adds:
 
 The result is a log that can help another programmer or reviewer follow a run without replacing the program, specification, output, or QC process.
 
+Use the [TRACE operations guide](docs/guides/operations.md) to see when to use each operation and how common statistical workflows map to the vocabulary.
+
 ## Try TRACE
 
 TRACE currently targets Python 3.10+ and the Developer Preview is being developed directly from this repository.
@@ -116,7 +118,7 @@ TRACE Core does not own or wrap the statistical transformation itself. Code such
 
 A clean TRACE run does **not** prove statistical correctness, and `VALIDATE PASS` means only that the implemented criterion passed.
 
-For deeper explanation, see [TRACE concepts](docs/concepts/README.md).
+For operation selection, see [TRACE operations](docs/guides/operations.md). For deeper explanation of the event and provenance model, see [TRACE concepts](docs/concepts/README.md).
 
 ## Real statistical-programming examples
 
@@ -157,11 +159,12 @@ See the [TRACE API](docs/api/) for the authoritative Developer Preview API.
 For normal Developer Preview use, follow this path:
 
 1. [Getting Started with TRACE](docs/guides/getting-started.md) — install and instrument your first workflow.
-2. [TRACE API](docs/api/) — exact public Python API signatures and semantics.
-3. [TRACE Statistical Programming Examples](examples/README.md) — run the public-data flagship examples.
-4. [TRACE Concepts](docs/concepts/) — structured events and program-level provenance.
-5. [Framework reference](docs/framework/) — operation vocabulary and reviewer methodology.
-6. [Using TRACE with Quarto](docs/guides/quarto.md) — optional Quarto workflow.
+2. [TRACE operations](docs/guides/operations.md) — choose the right statistical operation and see practical examples.
+3. [TRACE API](docs/api/) — exact public Python API signatures and semantics.
+4. [TRACE Statistical Programming Examples](examples/README.md) — run the public-data flagship examples.
+5. [TRACE Concepts](docs/concepts/) — structured events and program-level provenance.
+6. [Framework reference](docs/framework/) — normative vocabulary rules and reviewer methodology.
+7. [Using TRACE with Quarto](docs/guides/quarto.md) — optional Quarto workflow.
 
 [TRACE Design Documentation](docs/design/) contains architecture decisions, advanced design terminology, and design history. It is not required to use TRACE.
 
