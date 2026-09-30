@@ -2,21 +2,15 @@
 
 Thank you for contributing to TRACE.
 
-TRACE is in Developer Preview. The most valuable contributions are those grounded in realistic statistical-programming work and evidence about where the current API succeeds, feels unnatural, or is missing an important concept.
+TRACE is in Developer Preview. The most valuable contributions are grounded in realistic statistical-programming work and show where the current API is useful, unnatural, ambiguous, or missing an important concept.
 
 TRACE's guiding principle is:
 
 > TRACE should record what the statistical programmer means, not how Python logging works.
 
-TRACE is a lightweight structured logging library for Python statistical programming. It builds on Python's standard logging infrastructure and adds a statistical-programming vocabulary, structured events, consistent rendering, run lifecycle context, and lightweight program-level provenance. It is not intended to own dataframe transformations, generate TLFs, or become a general workflow orchestrator.
-
-Documentation should follow the public positioning and terminology defined in the [TRACE documentation guidelines](docs/contributing/documentation-guidelines.md).
-
-Please follow the [Code of Conduct](CODE_OF_CONDUCT.md) in all project interactions.
+TRACE is a lightweight structured logging library for Python statistical programming. It builds on Python's standard logging infrastructure and adds a statistical-programming vocabulary, structured events, consistent rendering, run lifecycle context, and lightweight program-level provenance. TRACE does not own dataframe transformations, generate TLFs, or act as a workflow orchestrator.
 
 ## Get the tests passing first
-
-A new contributor should be able to clone TRACE and reach a passing test suite in about ten minutes.
 
 ```bash
 git clone https://github.com/f-atisai/trace.git
@@ -27,15 +21,13 @@ python -m pip install -e ".[dev]"
 pytest
 ```
 
-On Windows PowerShell, activate the environment with:
+On Windows PowerShell:
 
 ```powershell
 .venv\Scripts\Activate.ps1
 ```
 
-If `pytest` passes, the development environment is ready.
-
-Before submitting a code change, run the complete local quality checks:
+Before submitting a code change, run:
 
 ```bash
 ruff check .
@@ -43,25 +35,21 @@ pytest
 mypy src
 ```
 
-To verify packaging changes:
+For packaging changes, also run:
 
 ```bash
 python -m build
 ```
 
-Build artifacts are written under `dist/` and should not be committed.
+Build artifacts under `dist/` should not be committed.
 
 ## Project structure
 
 ```text
 src/trace_tlf/      TRACE implementation
-tests/              Automated contract and behavior tests
+tests/              Automated behavior and contract tests
 examples/           Executable statistical-programming examples
-docs/concepts/      User-facing TRACE concepts
-docs/framework/     Operation vocabulary and reviewer methodology
-docs/api/           Developer Preview public Python API
-docs/guides/        Task-oriented user guidance
-docs/design/        Design rationale, architecture, and history
+docs/               User and maintainer documentation
 ```
 
 The public import is intentionally small:
@@ -70,15 +58,13 @@ The public import is intentionally small:
 from trace_tlf import Trace
 ```
 
-Do not treat internal event classes, renderers, provenance internals, sinks, or implementation objects as public API merely because they can be imported from internal modules. The current public boundary is documented in the [TRACE API](docs/api/README.md).
+Internal event classes, renderers, provenance internals, sinks, and implementation objects are not public API merely because they can be imported from internal modules.
 
 ## Choose the right contribution path
 
-Before writing code, identify what kind of change you have found.
-
 ### Bug
 
-A bug is existing behavior that contradicts the documented public contract, produces incorrect TRACE output, fails unexpectedly, or regresses behavior that should continue to work.
+A bug is behavior that contradicts the documented public behavior, produces incorrect TRACE output, fails unexpectedly, or regresses previously supported behavior.
 
 A useful bug report includes:
 
@@ -86,51 +72,47 @@ A useful bug report includes:
 - the smallest reproducible program;
 - expected behavior;
 - actual behavior and TRACE output or exception; and
-- whether the problem affects the documented public API.
+- whether the issue affects the public API.
 
-A missing API or a preference for different semantics is usually not a bug.
+A missing API or a preference for different semantics is usually a design proposal rather than a bug.
 
 ### API or design proposal
 
-Open an issue before implementing a change to public method signatures, operation vocabulary, lifecycle behavior, structured event semantics, provenance behavior, message grammar, or configuration.
+Open an issue before changing public method signatures, operation vocabulary, lifecycle behavior, structured event semantics, provenance behavior, message grammar, or configuration.
 
-The proposal should explain:
+A proposal should explain:
 
 1. the statistical-programming problem;
 2. a realistic program or reviewer workflow where it occurs;
 3. which current TRACE operation or API was attempted;
 4. what felt unnatural, ambiguous, verbose, or missing;
-5. what execution information the programmer expected TRACE to communicate;
-6. the proposed API or semantic change; and
+5. what the resulting TRACE log should communicate;
+6. the proposed change; and
 7. the compatibility impact on existing Developer Preview behavior.
 
-A concrete use case is more valuable than an abstract request for another helper or configuration option.
+A concrete use case is more useful than an abstract request for another helper or option.
 
-Design proposals belong in `docs/design/` only after there is a reason to preserve the design decision in the repository. Accepted user-facing concepts belong in `docs/concepts/`, operation semantics and reviewer methodology belong in `docs/framework/`, and supported Python behavior belongs in `docs/api/`.
+If an accepted change alters TRACE's architecture or contributor invariants, update [`docs/design.md`](docs/design.md). Historical design discussion belongs in issues, pull requests, and Git history rather than new phase documents.
 
 ### Statistical-programming use case
 
-Real workflows are especially valuable during the Developer Preview, even when the contributor does not yet know what the API solution should be.
+Real workflows are especially valuable during Developer Preview, even when the contributor does not yet know what the API solution should be.
 
-When reporting a use case, describe:
+Describe:
 
 - what you were programming;
 - the analytical stage, datasets, or outputs involved;
-- which TRACE operation or operations you tried;
+- which TRACE operations you tried;
 - what the statistical code actually did;
 - what felt unnatural or missing;
-- what you expected the resulting log to communicate to another programmer or reviewer; and
+- what you expected the log to communicate; and
 - a minimal example when possible.
-
-This kind of feedback helps TRACE evolve from realistic use rather than hypothetical API design.
 
 ### Documentation improvement
 
 Documentation changes are welcome when something is incorrect, incomplete, difficult to find, or harder to understand than necessary.
 
-TRACE follows a single-ownership rule for documentation: define each concept once in its authoritative document and reference it elsewhere. Avoid fixing a documentation problem by copying the same explanation into several files.
-
-Use the [documentation guidelines](docs/contributing/documentation-guidelines.md) to keep positioning and terminology consistent.
+TRACE follows a single-ownership rule: **define each concept once and reference it elsewhere instead of copying the same explanation into multiple files.**
 
 ## Working on a change
 
@@ -140,37 +122,25 @@ For a focused contribution:
 2. create a short-lived branch with a descriptive name;
 3. make the smallest change that solves the identified problem;
 4. add or update tests for behavioral changes;
-5. update public documentation when public behavior changes;
+5. update documentation when public behavior changes;
 6. run `ruff check .`, `pytest`, and `mypy src`; and
 7. open a pull request explaining the problem, solution, and verification performed.
 
-Keep unrelated cleanup out of the same pull request. Small, reviewable changes make API consequences easier to evaluate.
+Keep unrelated cleanup out of the same pull request.
 
 ## Code expectations
 
 Keep the core implementation explicit, typed, and backend-independent.
 
-TRACE should observe or record statistical-programming operations; it should not take ownership of the underlying statistical transformation. For example, pandas or Polars should perform a filter or merge and TRACE should record the meaningful execution information around that operation.
+TRACE records statistical-programming operations; it should not take ownership of the statistical transformation itself. pandas, Polars, NumPy, or other libraries perform the filter, merge, derivation, or analysis and TRACE records the meaningful operation around that work.
 
-Avoid adding runtime dependencies to TRACE Core unless they provide clear cross-backend value. Dataframe-specific integrations should remain optional rather than making pandas, Polars, or another analytical library a core requirement.
+Avoid adding runtime dependencies to TRACE Core unless they provide clear cross-backend value. Backend-specific integrations should remain optional.
 
-Ruff is the repository linter and import/style checker:
-
-```bash
-ruff check .
-```
-
-Mypy checks the typed core implementation:
-
-```bash
-mypy src
-```
+Prefer observable behavior over private implementation detail when designing tests or APIs.
 
 ## Test expectations
 
-Behavioral changes should include tests at the appropriate contract boundary.
-
-Tests are especially important for:
+Behavioral changes should include tests at the appropriate boundary, especially for:
 
 - public method signatures and argument validation;
 - structured event contents;
@@ -181,25 +151,43 @@ Tests are especially important for:
 - provenance finalization and artifact registration; and
 - regressions discovered in realistic statistical programs.
 
-Prefer tests of observable behavior over tests coupled to private implementation details.
+If a public signature changes, update the relevant contract tests deliberately rather than weakening them to make the change pass.
 
-If a public API signature changes, update the alpha public-contract tests deliberately rather than weakening them to make the change pass.
+## Documentation rules
 
-## Documentation expectations
+The release documentation is intentionally small:
 
-Public behavior should be documented with the change that implements it.
+```text
+README.md
+CONTRIBUTING.md
 
-Use:
+docs/
+├── getting-started.md
+├── logging-with-trace.md
+├── operations.md
+└── design.md
+```
 
-- `docs/concepts/` for concise user-facing explanations of TRACE concepts such as structured events and program-level provenance;
-- `docs/framework/` for canonical operation vocabulary and reviewer methodology;
-- `docs/api/` for the supported Python API;
-- `docs/guides/` for task-oriented workflows; and
-- `docs/design/` for rationale, alternatives, internal architecture, experimental terminology, and design history.
+Use these ownership rules:
 
-Executable statistical examples belong under `examples/`.
+- `README.md` — project introduction, quick example, installation, and links to the main docs;
+- `docs/getting-started.md` — first successful TRACE workflow;
+- `docs/logging-with-trace.md` — normal logging usage, lifecycle, steps, file logs, provenance, and review boundaries;
+- `docs/operations.md` — the canonical statistical-operation vocabulary and operation-selection guidance;
+- `docs/design.md` — current architecture, public/internal boundaries, and contributor invariants;
+- `CONTRIBUTING.md` — development and contribution workflow.
 
-Do not require ordinary users to read `docs/design/` to learn how to use supported public behavior. Advanced terms such as evidence-origin classifications should stay in design documentation unless they become an exposed user-facing capability.
+User-facing documentation should:
+
+- describe TRACE as **structured logging for statistical programming**;
+- explain user value before internal architecture;
+- use realistic statistical examples;
+- distinguish the statistical work from the TRACE call that records it;
+- keep the controlled operation vocabulary consistent;
+- avoid design-history terminology unless it is required to explain current behavior; and
+- avoid implying that TRACE independently observed or derived information that the programmer supplied.
+
+Do not create new documentation files merely to preserve design discussion. If the information affects current behavior or contributor constraints, update the appropriate existing document. Otherwise, rely on issues, pull requests, and Git history.
 
 ## Pull request checklist
 
@@ -210,8 +198,8 @@ Before requesting review, confirm that:
 - `pytest` passes;
 - `mypy src` passes;
 - new or changed behavior has appropriate tests;
-- public behavior is reflected in the public documentation;
+- public behavior is reflected in the appropriate documentation;
 - no unnecessary runtime dependency was introduced; and
 - API changes are backed by a realistic statistical-programming use case.
 
-Not every contribution needs to change code. A small reproducible use case that exposes API friction can be one of the most useful contributions to TRACE during the Developer Preview.
+Not every contribution needs to change code. A small reproducible use case that exposes API friction can be one of the most useful contributions during Developer Preview.
