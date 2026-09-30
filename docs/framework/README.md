@@ -1,43 +1,24 @@
-# TRACE Framework
+# TRACE framework reference
 
-TRACE is a **semantic execution evidence framework for statistical programming**. It defines how meaningful execution activity is represented so programmers and reviewers can understand what happened during a run and reconcile that evidence with the program and its outputs.
+TRACE is a structured logging library for statistical programming. Most users should begin with the [Getting Started guide](../guides/getting-started.md), then use the [TRACE API](../api/README.md) and examples as needed.
 
-The framework combines three evidence pillars:
+This directory contains the deeper reference material that defines TRACE's statistical-operation vocabulary and reviewer methodology.
 
-```text
-TRACE
- |
- +-- Semantic events
- +-- Structured diagnostics with evidence origin
- +-- Program-level execution provenance
-```
+## Framework reference
 
-A clean TRACE execution does not establish statistical correctness or replace specification review, code review, output review, or independent QC.
+- [TRACE Core Operations v0.1](core-operations-v0.1.md) — canonical statistical-operation vocabulary and operation semantics.
+- [Reviewing Statistical Programs with TRACE](reviewer-guide.md) — how reviewers use TRACE logs alongside programs and outputs.
 
-## Public framework documentation
+For the concepts behind TRACE's public behavior, see:
 
-- [TRACE Core Operations v0.1](core-operations-v0.1.md) — canonical statistical-operation vocabulary and semantic boundaries.
-- [Reviewing Statistical Programs with TRACE](reviewer-guide.md) — how reviewers use TRACE alongside statistical programs and outputs.
-- [TRACE API](../api/README.md) — authoritative TRACE for Python Developer Preview API.
-- [Getting Started with TRACE](../guides/getting-started.md) — first complete programmer workflow.
+- [Structured events](../concepts/structured-events.md)
+- [Program-level provenance](../concepts/provenance.md)
 
-## Core model
+For the supported Python interface, see the [TRACE API](../api/README.md).
 
-A TRACE event conceptually carries:
+## Statistical-operation vocabulary
 
-```text
-Event
-├── severity
-├── operation
-├── object
-├── action
-├── metrics
-├── details
-├── status
-└── context
-```
-
-The canonical semantic operations are:
+TRACE deliberately uses a controlled vocabulary for common statistical-programming activity:
 
 ```text
 READ
@@ -53,7 +34,7 @@ VALIDATE
 OUTPUT
 ```
 
-Lifecycle/system operations are:
+Lifecycle operations are:
 
 ```text
 START
@@ -61,24 +42,12 @@ END
 STEP
 ```
 
-The operation vocabulary is defined in detail in [TRACE Core Operations v0.1](core-operations-v0.1.md).
+The canonical definitions and boundaries for these operations are maintained in [TRACE Core Operations v0.1](core-operations-v0.1.md).
 
-## Evidence origin
+## Architecture and design history
 
-Structured diagnostics distinguish conceptually between:
+TRACE internally represents recorded activity as structured events and keeps program-level provenance separate from ordinary event rendering. Those concepts are documented under [`docs/concepts/`](../concepts/README.md).
 
-```text
-SUPPLIED   caller passed the value
-OBSERVED   TRACE or an integration inspected runtime state or an artifact
-DERIVED    TRACE calculated the value from diagnostics with known origins
-```
+Design history, implementation rationale, experimental models, and terminology that is not part of the normal user path belong under [`docs/design/`](../design/README.md).
 
-TRACE Core currently emphasizes caller-supplied diagnostics. Future integrations may observe runtime objects without changing the semantic operation model.
-
-## Program-level provenance
-
-For managed Python runs with `log_file`, TRACE can finalize a review log that identifies the program execution and the physical input/output artifacts registered through READ and OUTPUT events.
-
-Provenance is recorded once for the run rather than repeated on every event. The Developer Preview does not expose artifact hashing, environment fingerprinting, or provenance configuration controls.
-
-See the public [TRACE API](../api/README.md) for the supported behavior programmers can rely on.
+A clean TRACE run does not establish statistical correctness or replace specification review, code review, output review, or independent QC.
