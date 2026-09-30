@@ -1,6 +1,6 @@
 # TRACE framework reference
 
-TRACE is a structured logging library for statistical programming. Most users should begin with the [Getting Started guide](../guides/getting-started.md), then use the [TRACE API](../api/README.md) and examples as needed.
+TRACE is a structured logging library for statistical programming. Most users should begin with the [Getting Started guide](../guides/getting-started.md), then use the [TRACE operations guide](../guides/operations.md), [TRACE API](../api/README.md), and examples as needed.
 
 This directory contains the deeper reference material that defines TRACE's statistical-operation vocabulary and reviewer methodology.
 
@@ -8,6 +8,8 @@ This directory contains the deeper reference material that defines TRACE's stati
 
 - [TRACE Core Operations v0.1](core-operations-v0.1.md) — canonical statistical-operation vocabulary and operation semantics.
 - [Reviewing Statistical Programs with TRACE](reviewer-guide.md) — how reviewers use TRACE logs alongside programs and outputs.
+
+For practical operation selection and examples, see [TRACE operations](../guides/operations.md).
 
 For the concepts behind TRACE's public behavior, see:
 
@@ -42,7 +44,7 @@ END
 STEP
 ```
 
-The canonical definitions and boundaries for these operations are maintained in [TRACE Core Operations v0.1](core-operations-v0.1.md).
+The canonical definitions and boundaries for these operations are maintained in [TRACE Core Operations v0.1](core-operations-v0.1.md). The [TRACE operations guide](../guides/operations.md) translates those rules into practical examples from statistical workflows.
 
 ## Architecture and design history
 
