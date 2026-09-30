@@ -2,7 +2,7 @@
 
 Adapted from the PyCSR Quarto analysis ``analysis/tlf-02-population.qmd`` in
 ``elong0527/demo-py-esub``. This TRACE example is intentionally pure Python so
-execution evidence is independent of the Quarto reporting wrapper.
+execution logging is independent of the Quarto reporting wrapper.
 
 PyCSR's example workflow is used as the analysis reference, but TRACE does not
 use PyCSR's parquet-converted data. TRACE reads the original public CDISC Pilot
@@ -28,6 +28,7 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 
 ADSL_PATH = DATA_DIR / "adsl.xpt"
 OUTPUT_PATH = OUTPUT_DIR / "tlf_population.rtf"
+LOG_PATH = OUTPUT_DIR / "tlf_population.log"
 
 
 def load_xpt(path: Path) -> pl.DataFrame:
@@ -99,7 +100,11 @@ def format_population_table(
     )
 
 
-with Trace("TLF_POPULATION", study="CDISC Pilot") as trace:
+with Trace(
+    "TLF_POPULATION",
+    study="CDISC Pilot",
+    log_file=LOG_PATH,
+) as trace:
     with trace.step("Load ADSL"):
         adsl = load_xpt(ADSL_PATH)
         trace.read(
