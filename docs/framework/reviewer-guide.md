@@ -4,234 +4,192 @@ TRACE is a review companion for statistical programs and their outputs. This gui
 
 A TRACE review asks:
 
-> **Does the recorded analytical execution make sense, and is it consistent with the program and output being reviewed?**
+> **Does the recorded execution make sense, and is it consistent with the program and output being reviewed?**
 
-TRACE does not establish statistical correctness. Use it alongside the program, specification, output, and applicable QC process.
+TRACE does not establish statistical correctness. Use it alongside the specification, source code, output, and applicable QC process.
 
 ## What TRACE contributes
 
-A review normally has three perspectives:
+A statistical-program review usually has three perspectives:
 
 ```text
 Intent / code  ──────►  Execution  ──────►  Result
                            │
-                         TRACE
+                      TRACE log
 ```
 
-- **Intent and code** explain what the program was supposed to do and how it was implemented.
-- **TRACE** records the important analytical activity and execution evidence from the run.
+- **Intent and code** explain what the program should do and how it is implemented.
+- **TRACE** records important statistical operations, diagnostics, validations, and run context.
 - **Result** is the dataset, table, listing, figure, or other artifact that must ultimately be reviewed.
 
-TRACE is most useful as the bridge between the first and third perspectives.
+TRACE helps connect the implementation to the resulting artifact without replacing either.
 
-## Workflow with Quarto
+## Review workflow
 
-```text
-analysis.qmd  ──────►  TRACE  ──────►  TLF
-     │                   │              │
-Intent + code         Execution        Result
-```
+Whether the program is a Python script, Quarto document, notebook, or batch job, the review pattern is the same:
 
-Review the artifacts together:
+1. Read the specification and relevant source to understand the intended analysis.
+2. Follow the TRACE log to see the important operations recorded during the run.
+3. Investigate unexpected counts, merge behavior, validations, warnings, or execution transitions.
+4. Review the resulting output and reconcile it with both the program and TRACE log.
+5. When a finalized review log is available, use its program-level provenance to confirm the run and registered input/output artifacts.
 
-| Artifact | What the reviewer obtains |
-|---|---|
-| `analysis.qmd` | Analytical intent, narrative, methods, source code, and surrounding rationale. |
-| TRACE log | The important operations that actually executed, associated diagnostics, validations, and run/artifact provenance. |
-| TLF | The resulting statistical presentation to reconcile with the intended analysis and recorded execution. |
+TRACE does not remove the need to read source code. It reduces how much execution flow a reviewer must reconstruct from source alone.
 
-Quarto remains the narrative and implementation document. TRACE should not duplicate its rationale or methods prose.
+## Reading a finalized TRACE log
 
-A practical review sequence is:
-
-1. Read the relevant Quarto section to understand the intended analysis.
-2. Follow the TRACE log to confirm that the expected analytical path was executed.
-3. Investigate important diagnostics, validations, warnings, or unexpected transitions.
-4. Review the TLF and reconcile it with both the intended analysis and the recorded execution.
-5. Use provenance to confirm that the reviewed artifacts belong to the recorded run when that identity matters.
-
-## Workflow without Quarto
-
-```text
-tlf.py  ───────────►  TRACE  ──────►  TLF
-  │                    │              │
- Code                Execution        Result
-```
-
-The workflow is the same except that the Python source and associated specification provide the implementation context:
-
-1. Review the specification and relevant source sections to understand the intended analysis.
-2. Follow TRACE as a concise map of the important operations that executed.
-3. Investigate important diagnostics, validations, warnings, or unexpected transitions.
-4. Review the resulting TLF and reconcile it with the program and TRACE evidence.
-5. Use provenance to confirm execution/artifact identity where needed.
-
-TRACE does not remove the need to read source code. It reduces the amount of execution behavior a reviewer must reconstruct from source alone.
-
-## Review the flagship examples
-
-The executable examples use public CDISC Pilot Study ADaM data and can be read as execution evidence, not merely as API demonstrations.
-
-| Program | Reviewer focus |
-|---|---|
-| [`population_summary.py`](../../examples/population_summary.py) | Analysis-population selection, attrition, treatment counts, validation, and output. |
-| [`specific_adverse_events.py`](../../examples/specific_adverse_events.py) | Safety Population selection, ADSL/ADAE merging, and participant incidence by SOC and preferred term. |
-
-The programs are pure-Python adaptations of public PyCSR analyses. TRACE reads the original CDISC Pilot Study XPORT datasets directly from the CDISC repository. The [TRACE Statistical Programming Examples](../../examples/README.md) page provides the authoritative data sources and workflow references.
-
-### Population summary
-
-Read the population `FILTER` events together. They show how ADSL contributes to each analysis population and where participant counts change. The later summary and validation events make the treatment-level result reviewable, while `OUTPUT` connects the execution path to the generated RTF artifact.
-
-```text
-READ ADSL
-    ↓
-FILTER analysis populations
-    ↓
-AGGREGATE treatment summaries
-    ↓
-VALIDATE expected relationships
-    ↓
-OUTPUT RTF
-```
-
-### Specific adverse events
-
-The important boundary in this example is the merge between adverse-event records and the selected Safety Population. Inspect the contributing sources, merge diagnostics, and resulting incidence summary together.
-
-```text
-READ ADSL / ADAE
-       ↓
-FILTER Safety Population
-       ↓
-MERGE AE records with selected participants
-       ↓
-AGGREGATE participant incidence by SOC / PT / treatment
-       ↓
-VALIDATE
-       ↓
-OUTPUT RTF
-```
-
-To reproduce both examples:
-
-```bash
-python -m pip install -e ".[examples]"
-python examples/fetch_example_data.py
-python examples/population_summary.py
-python examples/specific_adverse_events.py
-```
-
-Generated RTF artifacts are written to `example-output/`.
-
-## Reading a TRACE log
-
-A TRACE log has two reviewer-facing layers:
+A managed run with `log_file` can produce two reviewer-facing layers:
 
 ```text
 TRACE EXECUTION
-Program:  tlf_population.py
-Run ID:   7eab...
-Started:  2026-09-12T14:32:18Z
-Ended:    2026-09-12T14:32:19Z
-Inputs:   data/adsl.parquet
-Outputs:  rtf/tlf_population.rtf
 
-INFO [START]     [tlf_population.py] execution started
-INFO [READ]      [ADSL] loaded – rows=254
-INFO [FILTER]    [ADSL] SAFFL == 'Y' applied – rows=254 → 249
-INFO [AGGREGATE] [ADSL] participant counts created – by=TRT01A
-INFO [VALIDATE]  [Treatment groups] expected groups present – PASS
-INFO [OUTPUT]    [T14_01] written – rtf/tlf_population.rtf
-INFO [END]       [tlf_population.py] execution completed – 0.84s
+Program:  TLF_POPULATION
+Run ID:   7eab...
+Executed: 2026-09-30T09:15:22Z
+
+Input artifacts:
+  data/adsl.xpt
+
+Output artifacts:
+  example-output/tlf_population.rtf
+
+INFO [START]     [TLF_POPULATION] execution started
+INFO [READ]      [ADSL] loaded – N=254, Vars=48
+INFO [FILTER]    [ADSL] SAFFL == 'Y' applied – N=254 → 249
+INFO [AGGREGATE] [ADSL] summarized – N=12
+INFO [VALIDATE]  [population_table] expected rows present – PASS
+INFO [OUTPUT]    [TLF_POPULATION] written – example-output/tlf_population.rtf
+INFO [END]       [TLF_POPULATION] execution completed – 0.84s
 ```
 
-The **execution block** identifies the program run and its physical input/output artifacts. The **event stream** records what happened analytically and the diagnostics associated with those operations.
+The **provenance block** identifies the program, run ID, execution timestamp, and registered physical artifacts. The **event stream** records the statistical operations and diagnostics reported by the program.
 
-During execution, the event stream is visible immediately on the console. After a managed run completes, the finalized log places program-level provenance before those events. The console answers what is happening now; the finalized log records what happened in that run.
+During execution, TRACE events are visible immediately on the console. The finalized file places the run-level provenance before the complete event stream.
 
-Read the event stream in order. TRACE is intended to expose the analytical journey rather than merely provide a collection of isolated messages.
+## What to look for
 
-## Review questions
+Use these questions as a review lens rather than a mandatory checklist for every program.
 
-Use the following questions as a review lens rather than a mandatory checklist for every program.
-
-| Area | Reviewer question | TRACE evidence to inspect |
+| Area | Reviewer question | TRACE information to inspect |
 |---|---|---|
-| **Inputs** | Were the expected analysis datasets or other inputs used? | `READ` events and input-artifact provenance. |
-| **Populations** | Did analysis populations and subsets evolve plausibly? | `FILTER` conditions and before/after diagnostics. |
-| **Merges** | Did cardinality behave as expected? | `MERGE` keys/method plus left, right, and result dimensions where recorded. |
-| **Derivations** | Were important analytical concepts derived? | `DERIVE` events for analysis variables, flags, categories, or endpoint values. |
-| **Analyses** | Was the intended statistical analysis executed? | `ANALYZE` identity, source, method, and population where recorded. |
-| **Validations** | Did explicit expectations pass? | `VALIDATE` outcomes and supporting diagnostics. |
-| **Outputs** | Were the expected artifacts generated? | `OUTPUT` events and output-artifact provenance. |
-| **Order** | Does the execution sequence make analytical sense? | Event order and coarse `STEP` scopes where present. |
-| **Provenance** | Does the reviewed output correspond to this execution? | Program, run ID, timestamps, artifact paths, and optional hashes. |
+| **Inputs** | Were the expected analysis inputs recorded? | `READ` events and input artifacts. |
+| **Populations** | Did analysis populations and subsets evolve plausibly? | `FILTER` conditions and before/after counts. |
+| **Merges** | Did the combination of datasets behave as expected? | `MERGE` keys, method, and row diagnostics where recorded. |
+| **Derivations** | Were important analytical concepts created? | `DERIVE` events. |
+| **Summaries** | Were grouped summaries produced as expected? | `AGGREGATE` events and grouping information. |
+| **Analyses** | Was the intended statistical method recorded? | `ANALYZE` source, method, population, and result. |
+| **Validations** | Did explicit implemented checks pass? | `VALIDATE` outcomes and diagnostics. |
+| **Outputs** | Were the expected artifacts produced? | `OUTPUT` events and output artifacts. |
+| **Order** | Does the execution sequence make analytical sense? | Event order and `STEP` scopes. |
+| **Run identity** | Does this log correspond to the run and artifacts under review? | Program, run ID, execution timestamp, and artifact paths. |
 
 ### Inputs
 
-Look for the datasets expected by the analysis. A missing `READ` event is worth investigating only when the program is expected to instrument that input; TRACE does not infer uninstrumented operations.
-
-Where artifact provenance is available, distinguish the semantic dataset identity from the physical file:
+Look for the datasets expected by the analysis:
 
 ```text
-READ [ADSL]
-Input artifact: data/adsl.parquet
+INFO [READ] [ADSL] loaded – N=254, Vars=48
+```
+
+A missing `READ` event matters only when the program is expected to instrument that input. TRACE does not infer operations that were never recorded.
+
+The semantic object and physical artifact are related but distinct:
+
+```text
+READ object:      ADSL
+Input artifact:   data/adsl.xpt
 ```
 
 ### Populations and filters
 
-Review important population and subset transitions, for example:
+Population selection should normally remain visible as a `FILTER`:
 
 ```text
-FILTER [ADSL] SAFFL == 'Y' applied – rows=754 → 720
+INFO [FILTER] [ADSL] SAFFL == 'Y' applied – N=254 → 249
 ```
 
-Ask whether the condition is appropriate for the intended population and whether the change in size is plausible. TRACE records the execution evidence; correctness of the population definition still requires the specification and code.
+Check whether the condition matches the intended population and whether the count change is plausible. The specification and source code remain authoritative for deciding whether the population definition is correct.
 
 ### Merges
 
-Look for unexpected expansion or contraction:
+Where row diagnostics are recorded, look for unexpected expansion or contraction:
 
 ```text
-MERGE [ADAE + ADSL] merged – left_rows=4127, right_rows=754, result_rows=4127
+INFO [MERGE] [ADAE + Safety Population] merged – left_rows=1191, right_rows=254, result_rows=1184
 ```
 
-Cardinality diagnostics are particularly useful when the expected relationship should preserve rows or keys. TRACE does not infer that a cardinality change is erroneous unless an explicit `VALIDATE` event tests that expectation.
+TRACE records the merge and supplied diagnostics. It does not decide whether a cardinality change is wrong unless the program explicitly records a validation for that expectation.
 
 ### Derivations and transformations
 
-Use `DERIVE` to identify important analytical concepts created during execution. Use `TRANSFORM` to understand material representation or structural changes such as pivots or reporting preparation.
+Use `DERIVE` to identify important analytical variables, flags, categories, or endpoints. Use `TRANSFORM` for material structural or representation changes such as pivots or reporting preparation.
 
-The absence of a TRACE event for every intermediate variable is intentional. Review should focus on analytically meaningful operations rather than line-by-line execution.
+TRACE is intentionally not a line-by-line execution trace. Intermediate implementation details do not need an event unless they improve reviewability.
 
-### Analyses
+### Aggregations and analyses
 
-An analysis event should make the analytical identity and method understandable:
+`AGGREGATE` covers grouped reductions such as counts, percentages, means, and descriptive statistics. `ANALYZE` records a statistical method, model, estimator, or analysis algorithm.
+
+For example:
 
 ```text
-ANALYZE [Overall survival] Kaplan-Meier fitted – source=ADTTE, population=ITT
+INFO [ANALYZE] [Overall Survival] analyzed – source=ADTTE, method=Kaplan-Meier, population=ITT
 ```
 
-Reconcile the analysis identity, source, population, and method with the specification or program. Statistical results themselves remain primarily the responsibility of the resulting output and statistical review.
+Reconcile the analysis identity, source, population, and method with the specification and program. Statistical interpretation remains outside TRACE.
 
 ### Validations
 
 Treat a failed validation as an explicit review signal:
 
 ```text
-WARNING [VALIDATE] [USUBJID uniqueness] FAIL – duplicate_subjects=2
+WARNING [VALIDATE] [ADSL] USUBJID uniqueness – FAIL
 ```
 
-A passed validation means only that the recorded criterion passed as implemented. It does not establish overall program correctness.
-
-Diagnostic values may be **observed**, **supplied**, or **derived**. Reviewer tooling or structured TRACE output may expose that origin even when the concise text rendering does not label it inline.
+A passing validation means only that the implemented criterion evaluated successfully. It does not establish broader program or statistical correctness.
 
 ### Outputs and provenance
 
-An `OUTPUT` event says that output production occurred. Program-level provenance identifies the physical artifact associated with the run.
+An `OUTPUT` event records that the program reported production of an artifact:
 
-When a SHA-256 hash is recorded, it can be used to determine whether the artifact under review is byte-for-byte the same artifact recorded for the execution. A matching hash establishes artifact identity, not statistical correctness.
+```text
+INFO [OUTPUT] [TLF_POPULATION] written – example-output/tlf_population.rtf
+```
+
+In a finalized managed run, the path can also appear once in program-level provenance. TRACE's current Developer Preview provenance records artifact paths; artifact hashing and environment fingerprinting are not part of the public alpha behavior.
+
+## Review the repository examples
+
+The executable examples provide a useful progression:
+
+| Program | Reviewer focus |
+|---|---|
+| [`basic_analysis_workflow.py`](../../examples/basic_analysis_workflow.py) | Basic `READ → FILTER → DERIVE → OUTPUT` flow and finalized provenance. |
+| [`population_summary.py`](../../examples/population_summary.py) | Analysis-population selection, treatment summaries, validation, steps, and RTF output. |
+| [`specific_adverse_events.py`](../../examples/specific_adverse_events.py) | Multiple inputs, Safety Population selection, ADSL/ADAE merge behavior, participant incidence, validation, and output. |
+
+The two TLF examples use original public CDISC Pilot Study XPORT datasets. See [TRACE Statistical Programming Examples](../../examples/README.md) for data sources, workflow references, and run instructions.
+
+A reviewer can read the example logs as compact maps of their workflows:
+
+```text
+Population summary
+READ ADSL
+  → FILTER analysis populations
+  → AGGREGATE treatment summaries
+  → TRANSFORM reporting layout
+  → VALIDATE
+  → OUTPUT RTF
+
+Specific adverse events
+READ ADSL + ADAE
+  → FILTER Safety Population
+  → AGGREGATE population counts
+  → MERGE ADAE with Safety Population
+  → AGGREGATE participant incidence
+  → VALIDATE
+  → OUTPUT RTF
+```
 
 ## What not to conclude from TRACE
 
@@ -241,30 +199,29 @@ A clean TRACE log does not mean:
 - the correct source data were supplied upstream;
 - a derivation or statistical method was implemented correctly;
 - every expected operation was instrumented;
-- the TLF is statistically or clinically correct; or
+- the output is statistically or clinically correct; or
 - independent QC is unnecessary.
 
-TRACE answers **what execution evidence was recorded for this run**. The reviewer remains responsible for interpreting that evidence with the program, specification, and output.
+TRACE records what the program reports through its TRACE calls. The reviewer remains responsible for interpreting that information against the specification, source code, output, and QC process.
 
-## A compact review pattern
-
-For most programs, the reviewer can use this sequence:
+## Compact review pattern
 
 ```text
 1. INTENT       What should this program do?
-2. PROVENANCE   Which run and artifacts am I reviewing?
+2. RUN          Which TRACE run and artifacts am I reviewing?
 3. INPUTS       What entered the analysis?
-4. FLOW         How did populations/data evolve?
-5. ANALYSIS     What analytical method was executed?
+4. FLOW         How did populations and data evolve?
+5. ANALYSIS     What summaries or methods were executed?
 6. VALIDATION   What explicit expectations passed or failed?
 7. OUTPUT       What was produced?
-8. RECONCILE    Does the execution make sense against code and result?
+8. RECONCILE    Does the recorded execution make sense against code and result?
 ```
 
-The goal is not to make the reviewer approve TRACE. The goal is to make the statistical execution easier to understand and interrogate.
+The goal is to make statistical execution easier to understand and interrogate, not to replace statistical review.
 
-## Related specifications
+## Related documentation
 
-- [TRACE Core Operations v0.1](core-operations-v0.1.md) defines TRACE operation vocabulary.
-- [TRACE Reviewer Experience](../design/reviewer-experience.md) defines the reviewer model and diagnostic-evidence semantics.
-- [TRACE Execution Provenance](../design/provenance.md) defines program-level execution provenance.
+- [TRACE operations](../guides/operations.md) explains when to use each statistical operation.
+- [TRACE Core Operations v0.1](core-operations-v0.1.md) defines the canonical vocabulary and boundaries.
+- [Program-level provenance](../concepts/provenance.md) explains the public provenance model.
+- [TRACE API](../api/README.md) documents the supported Python interface.
