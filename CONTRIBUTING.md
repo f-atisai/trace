@@ -8,7 +8,9 @@ TRACE's guiding principle is:
 
 > TRACE should record what the statistical programmer means, not how Python logging works.
 
-TRACE is a semantic execution evidence framework for statistical programming. It is not intended to replace Python's `logging` module, own dataframe transformations, generate TLFs, or become a general workflow orchestrator.
+TRACE is a lightweight structured logging library for Python statistical programming. It builds on Python's standard logging infrastructure and adds a statistical-programming vocabulary, structured events, consistent rendering, run lifecycle context, and lightweight program-level provenance. It is not intended to own dataframe transformations, generate TLFs, or become a general workflow orchestrator.
+
+Documentation should follow the public positioning and terminology defined in the [TRACE documentation guidelines](docs/contributing/documentation-guidelines.md).
 
 Please follow the [Code of Conduct](CODE_OF_CONDUCT.md) in all project interactions.
 
@@ -76,7 +78,7 @@ Before writing code, identify what kind of change you have found.
 
 ### Bug
 
-A bug is existing behavior that contradicts the documented public contract, produces incorrect TRACE evidence, fails unexpectedly, or regresses behavior that should continue to work.
+A bug is existing behavior that contradicts the documented public contract, produces incorrect TRACE output, fails unexpectedly, or regresses behavior that should continue to work.
 
 A useful bug report includes:
 
@@ -98,7 +100,7 @@ The proposal should explain:
 2. a realistic program or reviewer workflow where it occurs;
 3. which current TRACE operation or API was attempted;
 4. what felt unnatural, ambiguous, verbose, or missing;
-5. what execution evidence the programmer expected TRACE to communicate;
+5. what execution information the programmer expected TRACE to communicate;
 6. the proposed API or semantic change; and
 7. the compatibility impact on existing Developer Preview behavior.
 
@@ -117,16 +119,18 @@ When reporting a use case, describe:
 - which TRACE operation or operations you tried;
 - what the statistical code actually did;
 - what felt unnatural or missing;
-- what you expected the resulting evidence to communicate to another programmer or reviewer; and
+- what you expected the resulting log to communicate to another programmer or reviewer; and
 - a minimal example when possible.
 
-This kind of feedback helps TRACE evolve from evidence rather than hypothetical API design.
+This kind of feedback helps TRACE evolve from realistic use rather than hypothetical API design.
 
 ### Documentation improvement
 
 Documentation changes are welcome when something is incorrect, incomplete, difficult to find, or harder to understand than necessary.
 
 TRACE follows a single-ownership rule for documentation: define each concept once in its authoritative document and reference it elsewhere. Avoid fixing a documentation problem by copying the same explanation into several files.
+
+Use the [documentation guidelines](docs/contributing/documentation-guidelines.md) to keep positioning and terminology consistent.
 
 ## Working on a change
 
@@ -146,7 +150,7 @@ Keep unrelated cleanup out of the same pull request. Small, reviewable changes m
 
 Keep the core implementation explicit, typed, and backend-independent.
 
-TRACE should observe or record statistical-programming operations; it should not take ownership of the underlying statistical transformation. For example, pandas or Polars should perform a filter or merge and TRACE should record the meaningful evidence around that operation.
+TRACE should observe or record statistical-programming operations; it should not take ownership of the underlying statistical transformation. For example, pandas or Polars should perform a filter or merge and TRACE should record the meaningful execution information around that operation.
 
 Avoid adding runtime dependencies to TRACE Core unless they provide clear cross-backend value. Dataframe-specific integrations should remain optional rather than making pandas, Polars, or another analytical library a core requirement.
 
@@ -170,7 +174,7 @@ Tests are especially important for:
 
 - public method signatures and argument validation;
 - structured event contents;
-- rendered semantic evidence;
+- rendered TRACE output;
 - operation and status behavior;
 - lifecycle and step behavior;
 - exception propagation;
@@ -190,7 +194,7 @@ Use:
 - `docs/framework/` for TRACE semantics, vocabulary, and reviewer methodology;
 - `docs/api/` for the supported Python API;
 - `docs/guides/` for task-oriented workflows;
-- `docs/examples/` for reviewer-oriented evidence examples; and
+- `docs/examples/` for reviewer-oriented execution examples; and
 - `docs/design/` for rationale, alternatives, and architecture decisions.
 
 Executable statistical examples belong under `examples/`.
