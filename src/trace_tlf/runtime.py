@@ -21,6 +21,8 @@ from .trace import Trace as _CoreTrace
 class Trace(_CoreTrace):
     """TRACE orchestrator with live streaming and finalized review logs."""
 
+    _spool_path: Path | None
+
     def read(
         self,
         name: str,
