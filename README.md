@@ -152,19 +152,19 @@ See the [TRACE API](docs/api/) for the authoritative Developer Preview API.
 
 ## Documentation
 
-For normal Developer Preview use, follow the public documentation path:
+For normal Developer Preview use, follow this path:
 
 1. [Getting Started with TRACE](docs/guides/getting-started.md) — install and instrument your first workflow.
 2. [TRACE API](docs/api/) — exact public Python API signatures and semantics.
 3. [TRACE Statistical Programming Examples](examples/README.md) — run the public-data flagship examples.
-4. [TRACE Framework](docs/framework/) — deeper semantics, vocabulary, and reviewer workflow.
+4. [Concepts and reviewer methodology](docs/framework/) — deeper vocabulary, event semantics, provenance, and review guidance.
 5. [Using TRACE with Quarto](docs/guides/quarto.md) — optional Quarto workflow.
 
-[TRACE Design Documentation](docs/design/) contains governing design decisions and architecture history. It is not required to use TRACE.
+[TRACE Design Documentation](docs/design/) contains architecture decisions and design history. It is not required to use TRACE.
 
 ## Contributing
 
-API-design discussion, statistical-programming use cases, bug reports, and implementation contributions are welcome. See [Contributing to TRACE](CONTRIBUTING.md) before opening a pull request.
+API design discussion, statistical-programming use cases, bug reports, and implementation contributions are welcome. See [Contributing to TRACE](CONTRIBUTING.md) before opening a pull request.
 
 For repository development:
 
