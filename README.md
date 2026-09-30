@@ -116,6 +116,8 @@ TRACE Core does not own or wrap the statistical transformation itself. Code such
 
 A clean TRACE run does **not** prove statistical correctness, and `VALIDATE PASS` means only that the implemented criterion passed.
 
+For deeper explanation, see [TRACE concepts](docs/concepts/README.md).
+
 ## Real statistical-programming examples
 
 The flagship examples use the public **CDISC Pilot Study** ADaM datasets and recognizable clinical-reporting workflows:
@@ -157,10 +159,11 @@ For normal Developer Preview use, follow this path:
 1. [Getting Started with TRACE](docs/guides/getting-started.md) — install and instrument your first workflow.
 2. [TRACE API](docs/api/) — exact public Python API signatures and semantics.
 3. [TRACE Statistical Programming Examples](examples/README.md) — run the public-data flagship examples.
-4. [Concepts and reviewer methodology](docs/framework/) — deeper vocabulary, event semantics, provenance, and review guidance.
-5. [Using TRACE with Quarto](docs/guides/quarto.md) — optional Quarto workflow.
+4. [TRACE Concepts](docs/concepts/) — structured events and program-level provenance.
+5. [Framework reference](docs/framework/) — operation vocabulary and reviewer methodology.
+6. [Using TRACE with Quarto](docs/guides/quarto.md) — optional Quarto workflow.
 
-[TRACE Design Documentation](docs/design/) contains architecture decisions and design history. It is not required to use TRACE.
+[TRACE Design Documentation](docs/design/) contains architecture decisions, advanced design terminology, and design history. It is not required to use TRACE.
 
 ## Contributing
 
