@@ -73,7 +73,7 @@ INFO [FILTER] [ADSL] SAFFL == 'Y' applied – N=754 → 720
 
 The value of the structured event model is consistency. Instead of inventing a new `logging.info()` string for every program, TRACE uses the same operation vocabulary and rendering conventions across programs.
 
-Use [TRACE operations](guides/operations.md) to choose the right operation for a statistical task.
+Use [TRACE operations](operations.md) to choose the right operation for a statistical task.
 
 ## What to log
 
@@ -299,5 +299,5 @@ TRACE is a logging and review aid. Use it alongside the source code, specificati
 ## Where to go next
 
 - [Getting Started](getting-started.md) — instrument a first TRACE program.
-- [TRACE operations](guides/operations.md) — choose the right operation and see practical examples.
+- [TRACE operations](operations.md) — choose the right operation and see practical examples.
 - [Examples](../examples/README.md) — run complete statistical-programming workflows.
