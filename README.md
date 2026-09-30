@@ -122,21 +122,28 @@ For operation selection, see [TRACE operations](docs/guides/operations.md). For 
 
 ## Real statistical-programming examples
 
-The flagship examples use the public **CDISC Pilot Study** ADaM datasets and recognizable clinical-reporting workflows:
+The examples progress from a minimal workflow to realistic TLF programs:
 
-- [`examples/population_summary.py`](examples/population_summary.py) — analysis-population summary, including population attrition, treatment summaries, validation, and RTF output.
-- [`examples/specific_adverse_events.py`](examples/specific_adverse_events.py) — adverse events by SOC and preferred term, including safety-set selection, dataset merging, and subject incidence.
+- [`examples/basic_analysis_workflow.py`](examples/basic_analysis_workflow.py) — small ADSL-like workflow showing `READ`, `FILTER`, `DERIVE`, `OUTPUT`, and a finalized TRACE log.
+- [`examples/population_summary.py`](examples/population_summary.py) — public CDISC Pilot Study population summary with analysis-set selection, aggregation, validation, `STEP`, RTF output, and program-level provenance.
+- [`examples/specific_adverse_events.py`](examples/specific_adverse_events.py) — public CDISC Pilot Study adverse-events table with multiple inputs, safety-set selection, dataset merging, subject incidence, validation, `STEP`, RTF output, and provenance.
 
-Run them with:
+Run the basic example with:
 
 ```bash
 python -m pip install -e ".[examples]"
+python examples/basic_analysis_workflow.py
+```
+
+For the public-data TLF examples:
+
+```bash
 python examples/fetch_example_data.py
 python examples/population_summary.py
 python examples/specific_adverse_events.py
 ```
 
-See [TRACE Statistical Programming Examples](examples/README.md) for data provenance and workflow references, and [TRACE Reviewer Examples](docs/examples/README.md) for the reviewer perspective.
+See [TRACE Statistical Programming Examples](examples/README.md) for the progression, generated logs, data provenance, and workflow references, and [TRACE Reviewer Examples](docs/examples/README.md) for the reviewer perspective.
 
 ## Developer Preview status
 
@@ -161,7 +168,7 @@ For normal Developer Preview use, follow this path:
 1. [Getting Started with TRACE](docs/guides/getting-started.md) — install and instrument your first workflow.
 2. [TRACE operations](docs/guides/operations.md) — choose the right statistical operation and see practical examples.
 3. [TRACE API](docs/api/) — exact public Python API signatures and semantics.
-4. [TRACE Statistical Programming Examples](examples/README.md) — run the public-data flagship examples.
+4. [TRACE Statistical Programming Examples](examples/README.md) — progress from a basic workflow to realistic CDISC TLF examples.
 5. [TRACE Concepts](docs/concepts/) — structured events and program-level provenance.
 6. [Framework reference](docs/framework/) — normative vocabulary rules and reviewer methodology.
 7. [Using TRACE with Quarto](docs/guides/quarto.md) — optional Quarto workflow.
