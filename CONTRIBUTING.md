@@ -54,14 +54,13 @@ Build artifacts are written under `dist/` and should not be committed.
 ## Project structure
 
 ```text
-src/trace_tlf/      TRACE for Python implementation
+src/trace_tlf/      TRACE implementation
 tests/              Automated contract and behavior tests
 examples/           Executable statistical-programming examples
 docs/concepts/      User-facing TRACE concepts
 docs/framework/     Operation vocabulary and reviewer methodology
 docs/api/           Developer Preview public Python API
 docs/guides/        Task-oriented user guidance
-docs/examples/      Reviewer-oriented execution examples
 docs/design/        Design rationale, architecture, and history
 ```
 
@@ -195,8 +194,7 @@ Use:
 - `docs/concepts/` for concise user-facing explanations of TRACE concepts such as structured events and program-level provenance;
 - `docs/framework/` for canonical operation vocabulary and reviewer methodology;
 - `docs/api/` for the supported Python API;
-- `docs/guides/` for task-oriented workflows;
-- `docs/examples/` for reviewer-oriented execution examples; and
+- `docs/guides/` for task-oriented workflows; and
 - `docs/design/` for rationale, alternatives, internal architecture, experimental terminology, and design history.
 
 Executable statistical examples belong under `examples/`.
