@@ -9,10 +9,10 @@ statistical code does the work
           ↓
 TRACE records the meaningful operation
           ↓
-consistent execution log
+consistent execution log is produced
 ```
 
-TRACE does not filter data, derive variables, fit models, or generate outputs for you. pandas, Polars, NumPy, statistical libraries, or your own code perform those tasks. TRACE records the important operations and diagnostics nearby.
+TRACE can not filter data, derive variables, fit models, or generate outputs for you. pandas, Polars, NumPy, statistical libraries, or your own code perform those tasks. Then you can use TRACE to record the important operations and diagnostics.
 
 ## Create a managed run
 
@@ -202,7 +202,7 @@ The console answers **what is happening now**. The finalized log records **what 
 
 TRACE keeps provenance at the run level rather than repeating it on every event.
 
-The current Developer Preview records:
+The current release records:
 
 - **Program** — the program identity supplied to `Trace`;
 - **Run ID** — one identifier for the TRACE execution;
@@ -228,7 +228,7 @@ with Trace("T14_01", log_file="logs/T14_01.log") as trace:
 
 The `READ` and `OUTPUT` events explain the statistical workflow. The provenance block identifies the physical artifacts associated with the run.
 
-Artifact hashing, environment fingerprinting, and public provenance configuration are not part of the current Developer Preview.
+Artifact hashing, environment fingerprinting, and public provenance configuration are not part of the current release.
 
 ## TRACE works in normal Python environments
 
