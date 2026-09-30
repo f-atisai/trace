@@ -143,7 +143,7 @@ python examples/population_summary.py
 python examples/specific_adverse_events.py
 ```
 
-See [TRACE Statistical Programming Examples](examples/README.md) for the progression, generated logs, data provenance, and workflow references, and [TRACE Reviewer Examples](docs/examples/README.md) for the reviewer perspective.
+See [TRACE Statistical Programming Examples](examples/README.md) for the progression, generated logs, data provenance, workflow references, and reviewer questions.
 
 ## Developer Preview status
 
@@ -170,8 +170,9 @@ For normal Developer Preview use, follow this path:
 3. [TRACE API](docs/api/) — exact public Python API signatures and semantics.
 4. [TRACE Statistical Programming Examples](examples/README.md) — progress from a basic workflow to realistic CDISC TLF examples.
 5. [TRACE Concepts](docs/concepts/) — structured events and program-level provenance.
-6. [Framework reference](docs/framework/) — normative vocabulary rules and reviewer methodology.
-7. [Using TRACE with Quarto](docs/guides/quarto.md) — optional Quarto workflow.
+6. [Reviewing Statistical Programs with TRACE](docs/framework/reviewer-guide.md) — use TRACE logs during program and output review.
+7. [Framework reference](docs/framework/) — normative vocabulary rules and reviewer methodology.
+8. [Using TRACE with Quarto](docs/guides/quarto.md) — optional Quarto workflow.
 
 [TRACE Design Documentation](docs/design/) contains architecture decisions, advanced design terminology, and design history. It is not required to use TRACE.
 
