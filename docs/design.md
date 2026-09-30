@@ -176,7 +176,7 @@ program-level provenance
 ordered event stream
 ```
 
-Artifact hashes, environment fingerprints, Git metadata, package inventories, and automatic recovery of interrupted runs are not part of the current Developer Preview.
+Artifact hashes, environment fingerprints, Git metadata, package inventories, and automatic recovery of interrupted runs are not part of the current release.
 
 ## Finalized log behavior
 
@@ -289,5 +289,3 @@ The release documentation intentionally stays small:
 - [Logging with TRACE](logging-with-trace.md) — practical usage, lifecycle, steps, logs, provenance, and review boundaries;
 - [TRACE operations](operations.md) — operation vocabulary and selection rules;
 - this document — current architecture and contributor invariants.
-
-Historical design discussions, phase documents, prototypes, and abandoned alternatives belong in Git history rather than the release documentation tree.

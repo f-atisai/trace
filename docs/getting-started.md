@@ -1,4 +1,4 @@
-# Getting Started with TRACE
+# Getting Started
 
 TRACE adds structured logging to Python statistical programs without taking over the statistical work itself.
 
@@ -9,7 +9,7 @@ Do the statistical work.
 Record the important operation nearby with TRACE.
 ```
 
-Your pandas, Polars, NumPy, or other statistical code performs the filter, derivation, merge, analysis, or output. TRACE records the meaningful operation in a consistent form.
+Your pandas, Polars, NumPy, or other statistical code performs the analysis. TRACE records the meaningful operation in a consistent form.
 
 ## Install TRACE
 
@@ -28,19 +28,17 @@ Import `Trace` and use it as a context manager around a program run:
 ```python
 from trace_tlf import Trace
 
-with Trace("L16_01") as trace:
+with Trace("EXAMPLE") as trace:
     ...
 ```
 
 TRACE records the run lifecycle automatically:
 
 ```text
-INFO [START] [L16_01] execution started
+INFO [START] [EXAMPLE] execution started
 ...
-INFO [END] [L16_01] execution completed – 0.01s
+INFO [END] [EXAMPLE] execution completed – 0.01s
 ```
-
-Use a new `Trace` instance for each program execution.
 
 ## Record an operation
 
@@ -58,7 +56,7 @@ trace.filter(
 )
 ```
 
-The pandas expression performs the filter. TRACE records it:
+The pandas expression performs the filter. TRACE records it as:
 
 ```text
 INFO [FILTER] [ADSL] SAFFL == 'Y' applied – N=4 → 3
@@ -70,6 +68,8 @@ You do not need to trace every line. Record operations that materially help anot
 
 ## A complete example
 
+The repository includes a four-row example subject-level dataset at `examples/data/example_adsl.csv`. If you are following this guide without cloning the repository, [download the example CSV](https://raw.githubusercontent.com/f-atisai/trace/main/examples/data/example_adsl.csv) and save it at that path.
+
 ```python
 from pathlib import Path
 
@@ -77,20 +77,18 @@ import pandas as pd
 
 from trace_tlf import Trace
 
-
-adsl = pd.DataFrame(
-    {
-        "USUBJID": ["SUBJ001", "SUBJ002", "SUBJ003", "SUBJ004"],
-        "SAFFL": ["Y", "Y", "N", "Y"],
-        "TRT01A": ["Placebo", "Drug A", "Drug A", "Placebo"],
-    }
-)
-
+input_path = Path("examples/data/example_adsl.csv")
 output_path = Path("outputs/safety_subjects.csv")
 output_path.parent.mkdir(parents=True, exist_ok=True)
 
-with Trace("L16_01", log_file="logs/L16_01.log") as trace:
-    trace.read("ADSL", rows=len(adsl), columns=len(adsl.columns))
+with Trace("EXAMPLE", log_file="logs/EXAMPLE.log") as trace:
+    adsl = pd.read_csv(input_path)
+    trace.read(
+        "ADSL",
+        source=str(input_path),
+        rows=len(adsl),
+        columns=len(adsl.columns),
+    )
 
     safety = adsl.loc[adsl["SAFFL"] == "Y"]
     trace.filter(
@@ -119,16 +117,16 @@ python subject_listing.py
 The console shows the execution as it happens:
 
 ```text
-INFO [START] [L16_01] execution started
-INFO [READ] [ADSL] loaded – N=4, Vars=3
+INFO [START] [EXAMPLE] execution started
+INFO [READ] [ADSL] loaded – source=examples/data/example_adsl.csv, N=4, Vars=3
 INFO [FILTER] [ADSL] SAFFL == 'Y' applied – N=4 → 3
 INFO [OUTPUT] [Safety Population] written – outputs/safety_subjects.csv, format=CSV, N=3
-INFO [END] [L16_01] execution completed – 0.01s
+INFO [END] [EXAMPLE] execution completed – 0.01s
 ```
 
 Because `log_file` was supplied, TRACE also writes a finalized run log containing program-level run information and the recorded event stream.
 
-## What to learn next
+## Next Steps
 
 TRACE uses a small statistical-programming vocabulary:
 
