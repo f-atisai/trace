@@ -1,6 +1,15 @@
 # Getting Started with TRACE
 
-Add TRACE to a statistical program in a few minutes. Keep using pandas and your usual reporting tools; TRACE simply records the operations you want reviewers to see.
+Add structured logging to a statistical program in a few minutes. Keep using pandas, Polars, or your usual reporting tools; TRACE records the important statistical operations around that work.
+
+The basic pattern is simple:
+
+```text
+Do the statistical work.
+Record the important operation nearby with TRACE.
+```
+
+TRACE does not perform the filter, derivation, merge, analysis, or output for you. Your statistical code does the work; TRACE records what happened in a consistent form.
 
 ## Install TRACE
 
@@ -12,15 +21,96 @@ cd trace
 python -m pip install -e .
 ```
 
-The example below uses pandas:
+The examples below use pandas:
 
 ```bash
 python -m pip install pandas
 ```
 
-## Create a subject listing
+## Create your first TRACE run
 
-Save this example as `subject_listing.py`. It creates a small safety-population listing and records the important parts of the run.
+Start a run with `Trace`:
+
+```python
+from trace_tlf import Trace
+
+with Trace("L16_01") as trace:
+    ...
+```
+
+TRACE automatically records the start and end of the execution:
+
+```text
+INFO [START] [L16_01] execution started
+...
+INFO [END] [L16_01] execution completed – 0.01s
+```
+
+Use a new `Trace` instance for each program execution.
+
+## Record a statistical operation
+
+Suppose `adsl` is a pandas DataFrame and you select the safety population:
+
+```python
+listing = adsl.loc[adsl["SAFFL"] == "Y"]
+
+trace.filter(
+    "ADSL",
+    "SAFFL == 'Y'",
+    before=len(adsl),
+    after=len(listing),
+)
+```
+
+The pandas expression performs the filter. The nearby TRACE call records it:
+
+```text
+INFO [FILTER] [ADSL] SAFFL == 'Y' applied – N=4 → 3
+```
+
+This is the core TRACE workflow: **perform the work, then record the meaningful operation.**
+
+You do not need to trace every line. Record the operations that help another programmer or reviewer understand how the run progressed.
+
+## Add common operations
+
+TRACE uses statistical-programming operations instead of arbitrary log messages. A small program might record a dataset read, a population filter, and an output:
+
+```python
+trace.read("ADSL", rows=len(adsl), columns=len(adsl.columns))
+
+listing = adsl.loc[adsl["SAFFL"] == "Y"]
+trace.filter(
+    "ADSL",
+    "SAFFL == 'Y'",
+    result="Safety Subject Listing",
+    before=len(adsl),
+    after=len(listing),
+)
+
+listing.to_csv("outputs/safety_subject_listing.csv", index=False)
+trace.output(
+    "Safety Subject Listing",
+    "outputs/safety_subject_listing.csv",
+    format="CSV",
+    rows=len(listing),
+)
+```
+
+The resulting log follows the same vocabulary each time:
+
+```text
+INFO [READ] [ADSL] loaded – N=4, Vars=5
+INFO [FILTER] [ADSL] SAFFL == 'Y' applied – N=4 → 3
+INFO [OUTPUT] [Safety Subject Listing] written – outputs/safety_subject_listing.csv, format=CSV, N=3
+```
+
+Other TRACE operations cover checks, sorting, derivations, transformations, merges, aggregation, analyses, and validation. See the [TRACE API](../api/README.md) for the available methods and parameters.
+
+## Put it together
+
+Save the following as `subject_listing.py`:
 
 ```python
 from pathlib import Path
@@ -74,7 +164,7 @@ Run it:
 python subject_listing.py
 ```
 
-TRACE prints each event as it happens:
+TRACE prints the execution log as the program runs:
 
 ```text
 INFO [START] [L16_01] execution started
@@ -84,15 +174,16 @@ INFO [OUTPUT] [Safety Subject Listing] written – outputs/safety_subject_listin
 INFO [END] [L16_01] execution completed – 0.01s
 ```
 
-That is the basic TRACE pattern: perform the work, then record the operation with a nearby TRACE call.
+## Write a review log
 
->Tip: You do not need to trace every line.
+Pass `log_file` when you want a finalized log for the run:
 
-For every available method and parameter, see the [TRACE API](../api/README.md).
+```python
+with Trace("L16_01", log_file="logs/L16_01.log") as trace:
+    ...
+```
 
-## Open the review log
-
-The example also creates `logs/L16_01.log`. It begins with the run and its output artifact, followed by the execution events:
+The file begins with program-level run information and registered artifacts, followed by the execution log:
 
 ```text
 TRACE EXECUTION
@@ -112,13 +203,13 @@ INFO [START] [L16_01] execution started
 INFO [END] [L16_01] execution completed – 0.01s
 ```
 
-Start each execution with a new `Trace` instance. TRACE records what the program did.
+This gives the execution log enough context to identify the program, run, execution time, and input/output artifacts without changing ownership of the statistical work.
 
-> Note: TRACE does not replace code review, output review, or independent QC.
+TRACE records what the program reports through its TRACE calls. It does not independently prove that the statistical result is correct, and it does not replace code review, output review, or independent QC.
 
 ## Where to go next
 
-- [TRACE API](../api/README.md) — explore every operation and parameter.
-- [TRACE Statistical Programming Examples](../../examples/README.md) — run the public CDISC Pilot Study examples.
-- [Reviewing Statistical Programs with TRACE](../framework/reviewer-guide.md) — see how TRACE fits into review.
+- [TRACE API](../api/README.md) — see the supported operations and parameters.
+- [TRACE Statistical Programming Examples](../../examples/README.md) — run complete examples using the public CDISC Pilot Study data.
+- [Reviewing Statistical Programs with TRACE](../framework/reviewer-guide.md) — see how another programmer or reviewer can use TRACE logs.
 - [Using TRACE with Quarto](quarto.md) — add TRACE to a Quarto workflow.

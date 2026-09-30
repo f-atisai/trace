@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "trace-tlf"
 version = "0.1.0a1"
-description = "Semantic execution evidence for Python statistical programming."
+description = "Structured logging for Python statistical programming."
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
 license = "MIT"
@@ -16,7 +16,7 @@ authors = [
 keywords = [
     "clinical-programming",
     "statistical-programming",
-    "execution-evidence",
+    "structured-logging",
     "clinical-trials",
     "traceability",
     "auditability",
