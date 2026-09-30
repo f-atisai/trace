@@ -30,6 +30,7 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 ADSL_PATH = DATA_DIR / "adsl.xpt"
 ADAE_PATH = DATA_DIR / "adae.xpt"
 OUTPUT_PATH = OUTPUT_DIR / "tlf_ae_specific.rtf"
+LOG_PATH = OUTPUT_DIR / "tlf_ae_specific.log"
 TREATMENTS = ["Placebo", "Xanomeline Low Dose", "Xanomeline High Dose"]
 
 
@@ -87,7 +88,11 @@ def create_ae_by_soc_table(
     )
 
 
-with Trace("TLF_AE_SPECIFIC", study="CDISC Pilot") as trace:
+with Trace(
+    "TLF_AE_SPECIFIC",
+    study="CDISC Pilot",
+    log_file=LOG_PATH,
+) as trace:
     with trace.step("Load analysis data"):
         adsl = load_xpt(ADSL_PATH)
         trace.read(
