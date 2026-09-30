@@ -65,8 +65,8 @@ from trace_tlf import Trace
 ## Start here
 
 - [Getting Started](docs/getting-started.md) — install TRACE and instrument a first statistical program.
+- [Logging with TRACE](docs/logging-with-trace.md) — understand lifecycle, steps, file logs, provenance, and what to record.
 - [TRACE operations](docs/guides/operations.md) — choose the right operation and see practical examples.
-- [Examples](examples/README.md) — run progressively more realistic statistical-programming workflows.
 
 ## Examples
 
