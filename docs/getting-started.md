@@ -137,8 +137,10 @@ READ  CHECK  FILTER  SORT  DERIVE  TRANSFORM
 MERGE  AGGREGATE  ANALYZE  VALIDATE  OUTPUT
 ```
 
-- [Logging with TRACE](logging-with-trace.md) — learn how lifecycle, steps, file logs, provenance, and review fit together.
-- [TRACE operations](guides/operations.md) — choose the right operation for your work.
-- [Statistical programming examples](../examples/README.md) — run complete TRACE programs.
+Use [TRACE operations](operations.md) to choose the right operation for your work.
+
+Use [Logging with TRACE](logging-with-trace.md) to learn about steps, finalized file logs, provenance, and how to read a TRACE run.
+
+For complete runnable programs, see the [statistical programming examples](../examples/README.md).
 
 TRACE records what the program reports through its TRACE calls. It does not prove statistical correctness and does not replace code review, output review, or independent QC.
