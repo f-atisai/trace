@@ -123,7 +123,7 @@ def test_core_filter_does_not_require_runtime_dataframe():
     assert event.details["result"] == "Safety Population"
 
 
-def test_structured_event_is_renderer_input_and_source_of_truth(capsys):
+def test_emitted_text_matches_returned_event_rendering(capsys):
     event = Trace("T14_01").filter(
         "ADSL",
         "SAFFL == 'Y'",
