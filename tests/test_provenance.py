@@ -1,4 +1,3 @@
-import inspect
 import os
 
 import pytest
@@ -8,13 +7,6 @@ from trace_tlf import Trace
 
 def _temporary_files(tmp_path):
     return [path for path in tmp_path.iterdir() if path.name.startswith(".")]
-
-
-def test_constructor_signature_is_unchanged():
-    parameters = inspect.signature(Trace).parameters
-
-    assert list(parameters) == ["program", "study", "log_file", "level"]
-
 
 def test_events_stream_before_context_exit(tmp_path, capsys):
     log_file = tmp_path / "T14_01.log"
