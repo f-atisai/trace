@@ -256,9 +256,12 @@ def test_alpha_benchmark_api(capsys):
     )
     trace.output("T14_01", "T14_01.xlsx", rows=6)
 
-    output = capsys.readouterr().err
-    assert "INFO [READ] [ADSL] loaded" in output
-    assert "INFO [FILTER] [ADSL] SAFFL == 'Y' applied – N=754 → 720" in output
-    assert "INFO [DERIVE] [AGEGR1] created" in output
-    assert "INFO [AGGREGATE] [Safety Population] summarized" in output
-    assert "INFO [OUTPUT] [T14_01] written – T14_01.xlsx, N=6" in output
+    output = capsys.readouterr().err.strip().splitlines()
+    assert output == [
+        "INFO [READ] [ADSL] loaded – source=adsl.csv, N=754, Vars=16",
+        "INFO [FILTER] [ADSL] SAFFL == 'Y' applied – N=754 → 720",
+        "INFO [DERIVE] [AGEGR1] created – dataset=ADSL, source=AGE",
+        "INFO [AGGREGATE] [Safety Population] summarized – "
+        "by=TRT01A,AGEGR1, result=summary",
+        "INFO [OUTPUT] [T14_01] written – T14_01.xlsx, N=6",
+    ]
