@@ -1,5 +1,7 @@
 from dataclasses import fields
 
+import pytest
+
 from trace_tlf.context import TraceContext
 from trace_tlf.event import TraceEvent
 from trace_tlf.operations import Operation
@@ -7,78 +9,43 @@ from trace_tlf.severity import Severity
 from trace_tlf.status import Status
 
 
-def test_filter_event_can_represent_before_after():
-    event = TraceEvent(
-        severity=Severity.INFO,
-        operation=Operation.FILTER,
-        object="ADSL",
-        action="SAFFL == 'Y' applied",
-        metrics={"before": 754, "after": 720},
-    )
-    assert event.metrics["before"] == 754
-    assert event.metrics["after"] == 720
-
-
-def test_validate_event_can_represent_status():
-    event = TraceEvent(
-        severity=Severity.INFO,
-        operation=Operation.VALIDATE,
-        object="ADSL",
-        action="USUBJID uniqueness verified",
-        status=Status.SUCCESS,
-    )
-    assert event.status is Status.SUCCESS
-
-
-def test_end_event_can_represent_duration():
-    event = TraceEvent(
-        severity=Severity.INFO,
-        operation=Operation.END,
-        object="T14_01",
-        action="execution completed",
-        status=Status.SUCCESS,
-        metrics={"duration_seconds": 8.24},
-    )
-    assert event.metrics["duration_seconds"] == 8.24
-
-
-def test_step_event_can_contain_step_context():
+def test_event_preserves_structured_fields():
     context = TraceContext(
         program="T14_01",
         study="ABC123",
         run_id="run-001",
         step="Analysis population",
         step_path=("Analysis population",),
-        trace_version="0.0-prototype",
     )
-    event = TraceEvent(
-        severity=Severity.INFO,
-        operation=Operation.STEP,
-        object="Analysis population",
-        action="started",
-        context=context,
-    )
-    assert event.context is not None
-    assert event.context.step == "Analysis population"
-    assert event.context.step_path == ("Analysis population",)
-
-
-def test_details_and_metrics_stay_separate():
     event = TraceEvent(
         severity=Severity.INFO,
         operation=Operation.MERGE,
-        object="ADAE",
-        action="merged with ADSL",
+        object="ADAE + ADSL",
+        action="merged",
         metrics={"left_rows": 4127, "right_rows": 754},
         details={"on": "USUBJID", "how": "left"},
+        status=Status.SUCCESS,
+        context=context,
     )
-    assert "left_rows" in event.metrics
-    assert "on" not in event.metrics
-    assert "on" in event.details
-    assert "left_rows" not in event.details
+    assert event.to_dict() == {
+        "severity": "INFO",
+        "operation": "MERGE",
+        "object": "ADAE + ADSL",
+        "action": "merged",
+        "metrics": {"left_rows": 4127, "right_rows": 754},
+        "details": {"on": "USUBJID", "how": "left"},
+        "status": "SUCCESS",
+        "context": {
+            "program": "T14_01",
+            "study": "ABC123",
+            "run_id": "run-001",
+            "step": "Analysis population",
+            "step_path": ["Analysis population"],
+        },
+    }
 
 
-def test_sprint_exit_event_representation():
+def test_event_normalizes_string_enums_for_serialization():
     event = TraceEvent(
         severity="INFO",
         operation="FILTER",
@@ -95,6 +62,25 @@ def test_sprint_exit_event_representation():
     }
 
 
+def test_event_copies_mapping_containers():
+    metrics = {"rows": 754}
+    details = {"source": "adsl.csv"}
+    event = TraceEvent(
+        severity=Severity.INFO,
+        operation=Operation.READ,
+        object="ADSL",
+        action="loaded",
+        metrics=metrics,
+        details=details,
+    )
+
+    metrics["rows"] = 0
+    details["source"] = "changed.csv"
+
+    assert event.metrics == {"rows": 754}
+    assert event.details == {"source": "adsl.csv"}
+
+
 def test_event_schema_contains_only_structured_fields():
     assert [field.name for field in fields(TraceEvent)] == [
         "severity",
@@ -108,15 +94,26 @@ def test_event_schema_contains_only_structured_fields():
     ]
 
 
-def test_unknown_operation_is_rejected():
-    try:
-        TraceEvent(
-            severity=Severity.INFO,
-            operation="SUBSET",
-            object="ADSL",
-            action="subset applied",
-        )
-    except ValueError:
-        pass
-    else:
-        raise AssertionError("Unknown operation should be rejected")
+@pytest.mark.parametrize(
+    ("field_name", "value", "error_type"),
+    [
+        ("severity", "NOTICE", ValueError),
+        ("operation", "SUBSET", ValueError),
+        ("action", "", ValueError),
+        ("object", 42, TypeError),
+        ("status", "PASS", ValueError),
+        ("context", {}, TypeError),
+        ("metrics", [], TypeError),
+        ("details", [], TypeError),
+    ],
+)
+def test_event_rejects_invalid_fields(field_name, value, error_type):
+    values = {
+        "severity": Severity.INFO,
+        "operation": Operation.CHECK,
+        "action": "row count observed",
+    }
+    values[field_name] = value
+
+    with pytest.raises(error_type, match=field_name):
+        TraceEvent(**values)
