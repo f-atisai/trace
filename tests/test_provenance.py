@@ -192,12 +192,20 @@ def test_no_artifact_run_has_explicit_empty_sections(tmp_path):
     assert "Output artifacts:\n  (none)" in output
 
 
-def test_no_log_file_creates_no_persistent_provenance(tmp_path, monkeypatch):
+def test_no_log_file_skips_persistent_provenance(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    trace = Trace("T14_01")
 
-    with Trace("T14_01") as trace:
+    def fail_persistence(*args, **kwargs):
+        raise AssertionError("persistence must not run without log_file")
+
+    monkeypatch.setattr(trace, "_start_spool", fail_persistence)
+    monkeypatch.setattr(trace, "_write_direct_log", fail_persistence)
+
+    with trace:
         trace.read("ADSL", source="data/adsl.xpt")
 
+    assert getattr(trace, "_spool_path", None) is None
     assert list(tmp_path.iterdir()) == []
 
 
