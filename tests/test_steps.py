@@ -10,6 +10,7 @@ def test_step_started_and_completed(capsys):
         pass
 
     output = capsys.readouterr().err.strip().splitlines()
+    assert len(output) == 2
 
     assert output[0] == (
         "INFO [STEP] [Analysis population] started"
@@ -79,6 +80,7 @@ def test_step_failure_emits_failed_and_reraises(capsys):
             raise ValueError("boom")
 
     output = capsys.readouterr().err.strip().splitlines()
+    assert len(output) == 2
 
     assert output[0] == (
         "INFO [STEP] [Analysis population] started"
@@ -128,6 +130,7 @@ def test_step_failure_inside_program_emits_step_then_end_failure(capsys):
                 raise ValueError("boom")
 
     output = capsys.readouterr().err.strip().splitlines()
+    assert len(output) == 4
 
     assert output[0] == "INFO [START] [T14_01] execution started"
     assert output[1] == (
@@ -152,6 +155,7 @@ def test_nested_failure_emits_failure_for_each_active_scope(capsys):
                 raise ValueError()
 
     output = capsys.readouterr().err.strip().splitlines()
+    assert len(output) == 4
 
     assert output[0] == (
         "INFO [STEP] [Generate statistics] started"
@@ -194,6 +198,7 @@ def test_step_uses_monotonic_duration(monkeypatch, capsys):
         pass
 
     output = capsys.readouterr().err.strip().splitlines()
+    assert len(output) == 2
 
     assert output[1] == (
         "INFO [STEP] [Analysis population] completed – 0.031s"

@@ -10,6 +10,7 @@ def test_successful_run_emits_start_and_success_end(capsys):
         assert active is trace
 
     output = capsys.readouterr().err.strip().splitlines()
+    assert len(output) == 2
 
     assert output[0] == "INFO [START] [T14_01] execution started"
     assert output[1].startswith(
@@ -26,6 +27,7 @@ def test_failed_run_emits_failed_end_and_reraises(capsys):
             raise ValueError("boom")
 
     output = capsys.readouterr().err.strip().splitlines()
+    assert len(output) == 2
 
     assert output[0] == "INFO [START] [T14_01] execution started"
     assert output[1].startswith(
@@ -114,6 +116,7 @@ def test_end_event_uses_monotonic_duration(monkeypatch, capsys):
         pass
 
     output = capsys.readouterr().err.strip().splitlines()
+    assert len(output) == 2
 
     assert output[1] == (
         "INFO [END] [T14_01] execution completed – 8.24s"
