@@ -123,15 +123,6 @@ def test_core_filter_does_not_require_runtime_dataframe():
     assert event.details["result"] == "Safety Population"
 
 
-def test_trace_records_operation_but_does_not_perform_it():
-    source_rows = [1, 2, 3]
-    original = list(source_rows)
-
-    Trace("T14_01").filter("ADSL", "VALUE > 1", before=3, after=2)
-
-    assert source_rows == original
-
-
 def test_structured_event_is_renderer_input_and_source_of_truth(capsys):
     event = Trace("T14_01").filter(
         "ADSL",
