@@ -50,14 +50,14 @@ def test_filter_derives_removed_and_preserves_result_identity():
 def test_filter_rejects_empty_result_identity():
     trace = Trace("T14_01")
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="result"):
         trace.filter("ADSL", "SAFFL == 'Y'", result="")
 
 
 def test_filter_rejects_inconsistent_removed():
     trace = Trace("T14_01")
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="removed"):
         trace.filter(
             "ADSL",
             "SAFFL == 'Y'",

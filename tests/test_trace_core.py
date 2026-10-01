@@ -54,7 +54,7 @@ def test_trace_accepts_case_insensitive_level():
 
 
 def test_trace_rejects_unknown_level():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="level"):
         Trace("T14_01", level="VERBOSE")
 
 

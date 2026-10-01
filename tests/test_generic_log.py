@@ -33,7 +33,7 @@ def test_log_rejects_unknown_operation():
 
 def test_log_requires_nonempty_action():
     trace = Trace("T14_01")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="action"):
         trace.log("CHECK", object="ADSL", action="")
 
 
