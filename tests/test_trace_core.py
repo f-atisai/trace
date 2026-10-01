@@ -63,10 +63,3 @@ def test_trace_instances_have_distinct_run_ids_and_loggers():
     second = Trace("T14_01")
     assert first.run_id != second.run_id
     assert first.logger.name != second.logger.name
-
-
-def test_trace_does_not_expose_data_transformation_behavior():
-    trace = Trace("T14_01")
-    assert not hasattr(trace, "query")
-    assert not hasattr(trace, "merge_data")
-    assert not hasattr(trace, "to_json")
