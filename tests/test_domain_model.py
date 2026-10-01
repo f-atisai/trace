@@ -1,3 +1,5 @@
+from dataclasses import fields
+
 from trace_tlf.context import TraceContext
 from trace_tlf.event import TraceEvent
 from trace_tlf.operations import Operation
@@ -93,15 +95,17 @@ def test_sprint_exit_event_representation():
     }
 
 
-def test_event_has_no_rendered_message_field():
-    event = TraceEvent(
-        severity=Severity.INFO,
-        operation=Operation.CHECK,
-        object="ADSL",
-        action="row count observed",
-    )
-    assert not hasattr(event, "message")
-    assert not hasattr(event, "rendered")
+def test_event_schema_contains_only_structured_fields():
+    assert [field.name for field in fields(TraceEvent)] == [
+        "severity",
+        "operation",
+        "action",
+        "object",
+        "metrics",
+        "details",
+        "status",
+        "context",
+    ]
 
 
 def test_unknown_operation_is_rejected():

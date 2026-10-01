@@ -235,15 +235,3 @@ def test_render_step_completed():
     )
     expected = "INFO [STEP] [Analysis population] completed – 0.031s"
     assert render_text(event) == expected
-
-
-def test_event_remains_renderer_agnostic():
-    event = TraceEvent(
-        severity=Severity.INFO,
-        operation=Operation.FILTER,
-        object="ADSL",
-        action="SAFFL == 'Y' applied",
-        metrics={"before": 754, "after": 720},
-    )
-    assert not hasattr(event, "render")
-    assert not hasattr(event, "message")
