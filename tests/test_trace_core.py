@@ -1,14 +1,14 @@
 import pytest
 
-import trace_tlf
-from trace_tlf import Trace
-from trace_tlf.event import TraceEvent
-from trace_tlf.operations import Operation
+import trace_stat
+from trace_stat import Trace
+from trace_stat.event import TraceEvent
+from trace_stat.operations import Operation
 
 
 def test_alpha_top_level_exports_only_trace():
-    assert trace_tlf.__all__ == ["Trace"]
-    assert trace_tlf.Trace is Trace
+    assert trace_stat.__all__ == ["Trace"]
+    assert trace_stat.Trace is Trace
 
 
 def test_trace_smoke_event_and_console_output(capsys):

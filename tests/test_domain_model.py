@@ -2,11 +2,11 @@ from dataclasses import fields
 
 import pytest
 
-from trace_tlf.context import TraceContext
-from trace_tlf.event import TraceEvent
-from trace_tlf.operations import Operation
-from trace_tlf.severity import Severity
-from trace_tlf.status import Status
+from trace_stat.context import TraceContext
+from trace_stat.event import TraceEvent
+from trace_stat.operations import Operation
+from trace_stat.severity import Severity
+from trace_stat.status import Status
 
 
 def test_event_preserves_structured_fields():

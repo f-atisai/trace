@@ -1,8 +1,8 @@
 import pytest
 
-from trace_tlf import Trace
-from trace_tlf.operations import Operation
-from trace_tlf.status import Status
+from trace_stat import Trace
+from trace_stat.operations import Operation
+from trace_stat.status import Status
 
 
 def test_log_accepts_canonical_operation_string():

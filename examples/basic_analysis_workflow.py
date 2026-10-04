@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from trace_tlf import Trace
+from trace_stat import Trace
 
 OUTPUT_DIR = Path("example-output")
 OUTPUT_DIR.mkdir(exist_ok=True)

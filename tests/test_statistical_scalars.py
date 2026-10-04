@@ -1,6 +1,6 @@
 import numpy as np
 
-from trace_tlf import Trace
+from trace_stat import Trace
 
 
 def test_named_metrics_accept_numpy_integral_scalars():

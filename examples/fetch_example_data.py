@@ -22,7 +22,7 @@ DATA_DIR.mkdir(exist_ok=True)
 
 
 def download(source: str, destination: Path) -> None:
-    request = Request(source, headers={"User-Agent": "trace-tlf-example-fetcher"})
+    request = Request(source, headers={"User-Agent": "trace-stat-example-fetcher"})
 
     for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
         temporary_path: Path | None = None

@@ -660,7 +660,7 @@ class Trace:
             ) from exc
 
     def _build_logger(self) -> logging.Logger:
-        logger_name = f"trace_tlf.{self.program}.{self.run_id}"
+        logger_name = f"trace_stat.{self.program}.{self.run_id}"
         logger = logging.getLogger(logger_name)
         logger.setLevel(_LEVELS[self.level])
         logger.propagate = False

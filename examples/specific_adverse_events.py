@@ -21,7 +21,7 @@ import pandas as pd
 import polars as pl
 import rtflite as rtf
 
-from trace_tlf import Trace
+from trace_stat import Trace
 
 DATA_DIR = Path("data")
 OUTPUT_DIR = Path("example-output")

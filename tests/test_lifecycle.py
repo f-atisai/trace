@@ -1,6 +1,6 @@
 import pytest
 
-from trace_tlf import Trace
+from trace_stat import Trace
 
 
 def test_successful_run_emits_start_and_success_end(capsys):
@@ -106,7 +106,7 @@ def test_end_event_uses_monotonic_duration(monkeypatch, capsys):
     values = iter([100.0, 108.24])
 
     monkeypatch.setattr(
-        "trace_tlf.trace.time.monotonic",
+        "trace_stat.trace.time.monotonic",
         lambda: next(values),
     )
 

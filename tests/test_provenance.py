@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from trace_tlf import Trace
+from trace_stat import Trace
 
 
 def _temporary_files(tmp_path):

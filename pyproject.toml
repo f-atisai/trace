@@ -3,7 +3,7 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "trace-tlf"
+name = "trace-stat"
 version = "0.1.0"
 description = "Structured logging for Python statistical programming."
 readme = { file = "README.md", content-type = "text/markdown" }
@@ -55,7 +55,7 @@ Issues = "https://github.com/f-atisai/trace/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["trace_tlf*"]
+include = ["trace_stat*"]
 namespaces = false
 
 [tool.pytest.ini_options]

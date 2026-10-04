@@ -19,7 +19,7 @@ TRACE can not filter data, derive variables, fit models, or generate outputs for
 For a complete program run, use `Trace` as a context manager:
 
 ```python
-from trace_tlf import Trace
+from trace_stat import Trace
 
 with Trace("T14_01") as trace:
     ...

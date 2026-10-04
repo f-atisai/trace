@@ -46,7 +46,7 @@ Build artifacts under `dist/` should not be committed.
 ## Project structure
 
 ```text
-src/trace_tlf/      TRACE implementation
+src/trace_stat/      TRACE implementation
 tests/              Automated behavior and contract tests
 examples/           Executable statistical-programming examples
 docs/               User and maintainer documentation
@@ -55,7 +55,7 @@ docs/               User and maintainer documentation
 The public import is intentionally small:
 
 ```python
-from trace_tlf import Trace
+from trace_stat import Trace
 ```
 
 Internal event classes, renderers, provenance internals, sinks, and implementation objects are not public API merely because they can be imported from internal modules.

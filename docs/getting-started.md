@@ -26,7 +26,7 @@ python -m pip install -e .
 Import `Trace` and use it as a context manager around a program run:
 
 ```python
-from trace_tlf import Trace
+from trace_stat import Trace
 
 with Trace("EXAMPLE") as trace:
     ...
@@ -75,7 +75,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from trace_tlf import Trace
+from trace_stat import Trace
 
 input_path = Path("examples/data/example_adsl.csv")
 output_path = Path("outputs/safety_subjects.csv")

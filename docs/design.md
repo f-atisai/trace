@@ -209,7 +209,7 @@ Hard process termination can bypass normal context-manager finalization; the Dev
 The supported top-level import is intentionally small:
 
 ```python
-from trace_tlf import Trace
+from trace_stat import Trace
 ```
 
 Internal classes such as `TraceEvent`, context objects, renderers, provenance helpers, operation/status enums, and spool/finalization machinery are implementation details unless explicitly promoted to the public API in a future release.

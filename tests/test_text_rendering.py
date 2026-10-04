@@ -1,8 +1,8 @@
-from trace_tlf.event import TraceEvent
-from trace_tlf.operations import Operation
-from trace_tlf.rendering import render_text
-from trace_tlf.severity import Severity
-from trace_tlf.status import Status
+from trace_stat.event import TraceEvent
+from trace_stat.operations import Operation
+from trace_stat.rendering import render_text
+from trace_stat.severity import Severity
+from trace_stat.status import Status
 
 
 def test_render_read():

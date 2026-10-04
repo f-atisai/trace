@@ -93,7 +93,7 @@ jobs:
           python -m venv /tmp/trace-wheel-smoke
           /tmp/trace-wheel-smoke/bin/python -m pip install dist/*.whl
           /tmp/trace-wheel-smoke/bin/python - <<'PY'
-          from trace_tlf import Trace
+          from trace_stat import Trace
 
           trace = Trace("CI_SMOKE")
           event = trace.check("TRACE", "wheel import and public API available")
@@ -103,6 +103,6 @@ jobs:
       - name: Upload distributions
         uses: actions/upload-artifact@v4
         with:
-          name: trace-tlf-distributions
+          name: trace-stat-distributions
           path: dist/
           if-no-files-found: error
